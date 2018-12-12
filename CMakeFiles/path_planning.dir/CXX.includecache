@@ -772,6 +772,30 @@ lapacke_mangling.h
 
 /home/m/udacity/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/src/plugins/MatrixCwiseUnaryOps.h
 
+/home/m/udacity/CarND-Path-Planning-Project/src/car.cpp
+car.h
+/home/m/udacity/CarND-Path-Planning-Project/src/car.h
+math.h
+-
+string.h
+-
+functional
+-
+limits
+-
+map
+-
+vector
+-
+
+/home/m/udacity/CarND-Path-Planning-Project/src/car.h
+map
+-
+string
+-
+vector
+-
+
 /home/m/udacity/CarND-Path-Planning-Project/src/json.hpp
 algorithm
 -
@@ -829,13 +853,13 @@ vector
 -
 
 /home/m/udacity/CarND-Path-Planning-Project/src/main.cpp
-fstream
--
 math.h
 -
 uWS/uWS.h
 -
 chrono
+-
+fstream
 -
 iostream
 -
@@ -847,6 +871,8 @@ Eigen-3.3/Eigen/Core
 /home/m/udacity/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/Core
 Eigen-3.3/Eigen/QR
 /home/m/udacity/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/QR
+car.h
+/home/m/udacity/CarND-Path-Planning-Project/src/car.h
 json.hpp
 /home/m/udacity/CarND-Path-Planning-Project/src/json.hpp
 
