@@ -1,3 +1,4 @@
+
 #include "car.h"
 #include <math.h>
 #include <string.h>
@@ -5,11 +6,7 @@
 #include <limits>
 #include <map>
 #include <vector>
-
-const double MAX_ACC = 10;
-const double DELTA_T = 0.2;
-const double SPEED_LIMIT = 50;
-const double BUFFER_V = 5;
+#include "state.h"
 
 Car::Car(std::map<std::string, std::vector<std::string>> states, std::string state) {
   this->states = states;
@@ -26,20 +23,29 @@ std::string Car::get_state() {
 
 double evaluate_speed_limit(Trajectory trajectory) {
   double v_target = SPEED_LIMIT - BUFFER_V;
-  double v_trajectory = trajectory.get_velocity();
-  
+  double v_trajectory = trajectory.get_velocity() / MPH_TO_MS;
+
   if (v_trajectory > SPEED_LIMIT) {
     return 1.0;
   }
   if (v_trajectory > v_target && v_trajectory <= SPEED_LIMIT) {
     return (v_trajectory - v_target) / BUFFER_V;
   }
-  
-  return (v_target - v_trajectory) / v_target; 
+
+  return (v_target - v_trajectory) / v_target;
 }
 
 double evaluate_max_acc(Trajectory trajectory) {
-  return 0;
+  if (trajectory.s.size() < 2) {
+    return 0;
+  }
+  double s = trajectory.s[1] - trajectory.s[0];
+  double a = 2 * s / pow(DELTA_T, 2);
+
+  if (a >= MAX_ACC) {
+    return 1;
+  }
+  return exp(a - MAX_ACC);
 }
 
 double evaluate_efficiency(Trajectory trajectory) {
@@ -47,49 +53,47 @@ double evaluate_efficiency(Trajectory trajectory) {
 }
 
 double evaluate(Trajectory trajectory) {
-  double cost = 0;
-  cost += 100 * evaluate_speed_limit(trajectory);
-  cost += evaluate_max_acc(trajectory);
-  cost += evaluate_efficiency(trajectory);
+  double cost_speed_limit = evaluate_speed_limit(trajectory);
+  std::cout << "    sl: " << cost_speed_limit << "\n";
+  double cost_max_acc = evaluate_max_acc(trajectory);
+  std::cout << "    ma: " << cost_max_acc << "\n";
+  // double cost_efficiency = evaluate_efficiency(trajectory);
+  // std::cout << "    ef: " << cost_efficiency << "\n";
   // other costs
+  double cost = cost_speed_limit + cost_max_acc;// + cost_efficiency;
+  std::cout << "    --: " << cost << "\n";
   return cost;
 }
 
 Trajectory Car::build_trajectory(std::string state) {
-  Trajectory trajectory;
+  return CruiseState().build_trajectory(this->localization);
 
-  if (state == "ACC") {
-    double a = MAX_ACC * DELTA_T;
-    double s = this->localization.s;
-    for (int i = 0; i < 10; i++) {
-      double t = i * DELTA_T;
-      double delta_s = (a * std::pow(t, 2)) / 2;
-      s += delta_s;
-      trajectory.s.push_back(s);
-      trajectory.d.push_back(this->localization.d);
-    }
-  } else if (state == "CRUISE") {
-    double s = this->localization.s;
-    for (int i = 0; i < 50; i++) {
-      double delta_s = this->localization.speed * DELTA_T;
-      s += delta_s;
-      trajectory.s.push_back(s);
-      trajectory.d.push_back(this->localization.d);
-    }
-  } else {
-    trajectory.s.push_back(this->localization.s);
-    trajectory.d.push_back(this->localization.d);
-  }
+  // Trajectory trajectory;
 
-  return trajectory;
+  // if (state == "ACC") {
+  //   AccState state = AccState();
+  //   return state.build_trajectory(this->localization);
+  // } else if (state == "CRUISE") {
+  //   CruiseState state = CruiseState();
+  //   return state.build_trajectory(this->localization);
+  // } else {
+  //   for (int i = 0; i < 50; i++) {
+  //     trajectory.s.push_back(this->localization.s);
+  //     trajectory.d.push_back(this->localization.d);
+  //   }
+  // }
+
+  // return trajectory;
 }
 
 Trajectory Car::get_trajectory() {
   std::string state_next;
   double cost_min = std::numeric_limits<double>::infinity();
   Trajectory trajectory_min;
+  std::cout << "from: " << this->state << "\n";
   for (const std::string &transition : this->states[this->state]) {
     Trajectory trajectory = build_trajectory(transition);
+    std::cout << "  transition: " << transition << ":\n";
     double cost = evaluate(trajectory);
     if (cost < cost_min) {
       cost_min = cost;
@@ -97,7 +101,7 @@ Trajectory Car::get_trajectory() {
       state_next = transition;
     }
   }
-
+  std::cout << "to:   " << state_next << "\n";
   this->state = state_next;
   return trajectory_min;
 }

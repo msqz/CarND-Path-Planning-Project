@@ -184,7 +184,7 @@ int main() {
 
   map<string, vector<string>> states = {
       {"STOP", {"ACC", "STOP"}},
-      {"ACC", {"CRUISE", "ACC"}},
+      {"ACC", {"CRUISE", "ACC",}},
       {"DEACC", {"CRUISE", "STOP", "DEACC"}},
       {"CRUISE", {"ACC", "DEACC", "CRUISE"}},
   };
@@ -216,6 +216,7 @@ int main() {
           double car_d = j[1]["d"];
           double car_yaw = j[1]["yaw"];
           double car_speed = j[1]["speed"];
+          cout << "speed: " << car_speed << "\n";
 
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
@@ -242,7 +243,7 @@ int main() {
           });
 
           Trajectory trajectory = car.get_trajectory();
-					std::cout << car.get_state() << "\n";
+					// std::cout << car.get_state() << "\n";
 
           // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           for (int i = 0; i < trajectory.s.size(); i++) {

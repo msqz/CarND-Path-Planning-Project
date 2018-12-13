@@ -787,6 +787,8 @@ map
 -
 vector
 -
+state.h
+/home/m/udacity/CarND-Path-Planning-Project/src/state.h
 
 /home/m/udacity/CarND-Path-Planning-Project/src/car.h
 map
@@ -875,4 +877,12 @@ car.h
 /home/m/udacity/CarND-Path-Planning-Project/src/car.h
 json.hpp
 /home/m/udacity/CarND-Path-Planning-Project/src/json.hpp
+
+/home/m/udacity/CarND-Path-Planning-Project/src/state.h
+math.h
+-
+iostream
+-
+car.h
+/home/m/udacity/CarND-Path-Planning-Project/src/car.h
 

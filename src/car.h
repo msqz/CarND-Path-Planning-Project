@@ -2,6 +2,9 @@
 #include <string>
 #include <vector>
 
+#ifndef CAR_H
+#define CAR_H
+
 struct Trajectory {
   std::vector<double> s;
   std::vector<double> d;
@@ -40,3 +43,5 @@ class Car {
   void set_localization(Localization localization);
   std::string get_state();
 };
+
+#endif
