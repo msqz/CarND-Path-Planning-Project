@@ -185,8 +185,8 @@ int main() {
   map<string, vector<string>> states = {
       {"STOP", {"ACC", "STOP"}},
       {"ACC", {"CRUISE", "ACC",}},
-      {"DEACC", {"CRUISE", "STOP", "DEACC"}},
-      {"CRUISE", {"ACC", "DEACC", "CRUISE"}},
+      {"DECC", {"CRUISE", "STOP", "DECC"}},
+      {"CRUISE", {"ACC", "DECC", "CRUISE"}},
   };
 
   Car car = Car(states, "STOP");
@@ -216,7 +216,7 @@ int main() {
           double car_d = j[1]["d"];
           double car_yaw = j[1]["yaw"];
           double car_speed = j[1]["speed"];
-          cout << "speed: " << car_speed << "\n";
+          // cout << "speed: " << car_speed << "\n";
 
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
@@ -263,7 +263,7 @@ int main() {
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
-          //this_thread::sleep_for(chrono::milliseconds(1000));
+          // this_thread::sleep_for(chrono::milliseconds(1000));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

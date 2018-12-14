@@ -787,6 +787,8 @@ map
 -
 vector
 -
+constraints.h
+/home/m/udacity/CarND-Path-Planning-Project/src/constraints.h
 state.h
 /home/m/udacity/CarND-Path-Planning-Project/src/state.h
 
@@ -797,6 +799,8 @@ string
 -
 vector
 -
+
+/home/m/udacity/CarND-Path-Planning-Project/src/constraints.h
 
 /home/m/udacity/CarND-Path-Planning-Project/src/json.hpp
 algorithm
@@ -885,4 +889,6 @@ iostream
 -
 car.h
 /home/m/udacity/CarND-Path-Planning-Project/src/car.h
+constraints.h
+/home/m/udacity/CarND-Path-Planning-Project/src/constraints.h
 
