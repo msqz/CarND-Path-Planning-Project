@@ -32,13 +32,12 @@ struct SensorFusion {
 };
 
 class Car {
-  std::map<std::string, std::vector<std::string>> states;
   std::string state;
   Localization localization;
   Trajectory build_trajectory(std::string state);
 
  public:
-  Car(std::map<std::string, std::vector<std::string>> states, std::string state);
+  Car();
   Trajectory get_trajectory();
   void set_localization(Localization localization);
   std::string get_state();
