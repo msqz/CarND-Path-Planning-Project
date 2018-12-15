@@ -269,7 +269,14 @@ int main() {
           }
 
           msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = smooth(next_x_vals, next_y_vals);
+          // msgJson["next_y"] = smooth(next_x_vals, next_y_vals);
+          msgJson["next_y"] = next_y_vals;
+
+          json j;
+          j["next_s"] = trajectory.s;
+          j["next_d"] = trajectory.d;
+          std::cout << "next_s: " << j["next_s"].dump() <<"\n";
+          std::cout << "next_d: " << j["next_d"].dump() <<"\n";
           std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
           std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 

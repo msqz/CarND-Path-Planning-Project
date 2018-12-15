@@ -25,10 +25,7 @@ double evaluate_speed_limit(Trajectory trajectory) {
   double v_target = SPEED_LIMIT - BUFFER_V;
   double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
   std::cout << "    v: " << v_trajectory << "\n";
-  if (v_trajectory > SPEED_LIMIT) {
-    return 1;
-  }
-
+  
   if (v_trajectory > v_target) {
     return (v_trajectory - v_target) / BUFFER_V;
   }
@@ -56,8 +53,8 @@ double evaluate(Trajectory trajectory) {
   std::cout << "    sl: " << cost_speed_limit << "\n";
   // double cost_max_acc = evaluate_max_acc(trajectory);
   // std::cout << "    ma: " << cost_max_acc << "\n";
-  double cost_efficiency = evaluate_efficiency(trajectory);
-  std::cout << "    ef: " << cost_efficiency << "\n";
+  // double cost_efficiency = evaluate_efficiency(trajectory);
+  // std::cout << "    ef: " << cost_efficiency << "\n";
   // other costs
   double cost = cost_speed_limit;  // + cost_efficiency;
   std::cout << "    --: " << cost << "\n";
@@ -130,6 +127,7 @@ Trajectory Car::get_trajectory() {
     if (equal == true) {
       state_next = this->state;
       trajectory_min = std::get<1>(state_to_cost[state_next]);
+      std::cout << "keep\n";
     }
   }
   std::cout << "to: " << state_next << "\n";
@@ -138,7 +136,6 @@ Trajectory Car::get_trajectory() {
 }
 
 double Trajectory::get_velocity() {
-  double distance = this->s.back() - this->s[0];
-  double t = this->s.size() * DELTA_T;
-  return distance / t;
+  // it's distance / (50 elements * 0.02s each) -> distance/1s
+  return this->s[49] - this->s[0];
 }
