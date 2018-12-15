@@ -9,6 +9,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "car.h"
 #include "json.hpp"
+#include "spline.h"
 
 using namespace std;
 
@@ -145,6 +146,32 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
   return {x, y};
 }
 
+vector<double> smooth(const vector<double> &x, const vector<double> &y) {
+  if (x.size() <= 2) {
+    return y;
+  }
+
+  vector<double> source_x;
+  vector<double> source_y;
+
+  for (int i = 0; i < x.size(); i++) {
+    if (i % 20 == 0 || i == x.size() - 1) {
+      source_x.push_back(x[i]);
+      source_y.push_back(y[i]);
+    }
+  }
+
+  tk::spline s;
+  s.set_points(source_x, source_y);
+
+  vector<double> splined_y;
+  for (const double &val : x) {
+    splined_y.push_back(s(val));
+  }
+
+  return splined_y;
+}
+
 int main() {
   uWS::Hub h;
 
@@ -182,14 +209,7 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  map<string, vector<string>> states = {
-      {"STOP", {"ACC", "STOP"}},
-      {"ACC", {"CRUISE", "ACC",}},
-      {"DECC", {"CRUISE", "STOP", "DECC"}},
-      {"CRUISE", {"ACC", "DECC", "CRUISE"}},
-  };
-
-  Car car = Car(states, "STOP");
+  Car car = Car();
 
   h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &car](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                                                                                                                  uWS::OpCode opCode) {
@@ -209,15 +229,6 @@ int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
-          // Main car's localization Data
-          double car_x = j[1]["x"];
-          double car_y = j[1]["y"];
-          double car_s = j[1]["s"];
-          double car_d = j[1]["d"];
-          double car_yaw = j[1]["yaw"];
-          double car_speed = j[1]["speed"];
-          // cout << "speed: " << car_speed << "\n";
-
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
           auto previous_path_y = j[1]["previous_path_y"];
@@ -233,19 +244,18 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
+          // Main car's localization Data
           car.set_localization({
-              .x = car_x,
-              .y = car_y,
-              .s = car_s,
-              .d = car_d,
-              .yaw = car_yaw,
-              .speed = car_speed,
+              .x = j[1]["x"],
+              .y = j[1]["y"],
+              .s = j[1]["s"],
+              .d = j[1]["d"],
+              .yaw = j[1]["yaw"],
+              .speed = j[1]["speed"],
           });
 
           Trajectory trajectory = car.get_trajectory();
-					// std::cout << car.get_state() << "\n";
 
-          // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           for (int i = 0; i < trajectory.s.size(); i++) {
             vector<double> xy_new = getXY(
                 trajectory.s[i],
@@ -254,12 +264,21 @@ int main() {
                 map_waypoints_x,
                 map_waypoints_y);
 
-						next_x_vals.push_back(xy_new[0]);
-						next_y_vals.push_back(xy_new[1]);
+            next_x_vals.push_back(xy_new[0]);
+            next_y_vals.push_back(xy_new[1]);
           }
 
           msgJson["next_x"] = next_x_vals;
+          // msgJson["next_y"] = smooth(next_x_vals, next_y_vals);
           msgJson["next_y"] = next_y_vals;
+
+          json j;
+          j["next_s"] = trajectory.s;
+          j["next_d"] = trajectory.d;
+          std::cout << "next_s: " << j["next_s"].dump() <<"\n";
+          std::cout << "next_d: " << j["next_d"].dump() <<"\n";
+          std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
+          std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
