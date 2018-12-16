@@ -12,7 +12,7 @@ const double SPEED_LIMIT = 50;
 const double BUFFER_V = 2.0;
 const double MPH_TO_MS = 0.447;
 const double MS_TO_MPH = 1 / 0.447;
-const uint TRAJECTORY_LENGTH = 100;
+const int TRAJECTORY_LENGTH = 100;
 
 std::map<std::string, std::vector<std::string>> STATES = {
     {"STOP", {"ACC", "STOP"}},
