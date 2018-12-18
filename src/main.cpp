@@ -8,6 +8,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "car.h"
+#include "constraints.h"
 #include "json.hpp"
 #include "spline.h"
 
@@ -130,69 +131,78 @@ vector<double> getXY(
     const vector<double> &maps_y,
     const vector<double> &maps_dx,
     const vector<double> &maps_dy) {
-  vector<double> waypoints_normalized;
+  int next_wp;
   for (int i = 0; i < maps_s.size(); i++) {
-    int preceeding_wp = i - 1;
-    if (preceeding_wp < 0) {
-      preceeding_wp = maps_s.size() - abs(preceeding_wp);
+    if (maps_s[i] >= s) {
+      next_wp = i;
+      break;
     }
-    double angle_prev = atan2(maps_dy[preceeding_wp], maps_dx[preceeding_wp]);
-    double angle_current = atan2(maps_dy[i], maps_dx[i]);
-    double angle = abs(angle_prev - angle_current) / 2.0;
-    double norm = (angle/2*M_PI) * (2.0 * M_PI * d); 
-    double waypoint_s_norm = maps_s[i] + norm;
-
-    waypoints_normalized.push_back(waypoint_s_norm);
   }
 
-  int prev_wp = -1;
-  while (s > waypoints_normalized[prev_wp + 1] && (prev_wp < (int)(waypoints_normalized.size() - 1))) {
-    prev_wp++;
+  // Change from vector to incrementing wp_ahead_idx and wp_behind_idx
+  int waypoints_no = maps_s.size();
+  int wp_behind = next_wp;
+  for (int i = 0; i < 5; i++) {
+    wp_behind = wp_behind - 1;
+    // Handle leap to the end of the track
+    if (wp_behind < 0) {
+      wp_behind = (waypoints_no + wp_behind);
+    }
+    wp_behind = wp_behind % waypoints_no;
   }
 
-  int wp2 = (prev_wp + 1) % maps_x.size();
+  int wp_ahead = next_wp;
+  for (int i = 0; i < 10; i++) {
+    wp_ahead = (wp_ahead + 1) % waypoints_no;
+  }
 
-  double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
-  // the x,y,s along the segment
-  double seg_s = (s - maps_s[prev_wp]);
-  // double seg_s = (s - prev_wp_s_norm);
-  // double seg_s = (s - waypoints_normalized[prev_wp]);
+  vector<double> s_values;
+  vector<double> x_values;
+  vector<double> y_values;
+  vector<double> dx_values;
+  vector<double> dy_values;
 
-  double seg_x = maps_x[prev_wp] + seg_s * cos(heading);
-  double seg_y = maps_y[prev_wp] + seg_s * sin(heading);
+  // Handling the track leap (going from waypoint 180 to 0)
+  int idx_start = wp_behind;
+  int idx_end = wp_ahead;
+  if (idx_start > idx_end) {
+    idx_end += maps_s.size() + 1;
+  }
+  while (idx_start < idx_end) {
+    int idx = idx_start;
+    if (idx > maps_s.size()) {
+      idx -= maps_s.size();
+    }
 
-  double perp_heading = heading - pi() / 2;
+    double s_value = maps_s[idx];
+    if (s_value > maps_s[wp_ahead]) {
+      s_value = s_value - TRACK_LENGTH;
+    }
+    s_values.push_back(s_value);
+    x_values.push_back(maps_x[idx]);
+    y_values.push_back(maps_y[idx]);
+    dx_values.push_back(maps_dx[idx]);
+    dy_values.push_back(maps_dy[idx]);
 
-  double x = seg_x + d * cos(perp_heading);
-  double y = seg_y + d * sin(perp_heading);
+    ++idx_start;
+  }
+
+  tk::spline spline_s_x;
+  spline_s_x.set_points(s_values, x_values);
+
+  tk::spline spline_s_y;
+  spline_s_y.set_points(s_values, y_values);
+
+  tk::spline spline_s_dx;
+  spline_s_dx.set_points(s_values, dx_values);
+
+  tk::spline spline_s_dy;
+  spline_s_dy.set_points(s_values, dy_values);
+
+  double x = spline_s_x(s) + spline_s_dx(s) * d;
+  double y = spline_s_y(s) + spline_s_dy(s) * d;
 
   return {x, y};
-}
-
-vector<double> smooth(const vector<double> &x, const vector<double> &y) {
-  if (x.size() <= 2) {
-    return y;
-  }
-
-  vector<double> source_x;
-  vector<double> source_y;
-
-  for (int i = 0; i < x.size(); i++) {
-    if (i % 20 == 0 || i == x.size() - 1) {
-      source_x.push_back(x[i]);
-      source_y.push_back(y[i]);
-    }
-  }
-
-  tk::spline s;
-  s.set_points(source_x, source_y);
-
-  vector<double> splined_y;
-  for (const double &val : x) {
-    splined_y.push_back(s(val));
-  }
-
-  return splined_y;
 }
 
 int main() {
@@ -277,24 +287,36 @@ int main() {
               .speed = j[1]["speed"],
           });
 
+          vector<vector<double>> new_path;
           Trajectory trajectory = car.get_trajectory();
-
           for (int i = 0; i < trajectory.s.size(); i++) {
-            vector<double> xy_new = getXY(
+            new_path.push_back(getXY(
                 trajectory.s[i],
                 trajectory.d[i],
                 map_waypoints_s,
                 map_waypoints_x,
                 map_waypoints_y,
                 map_waypoints_dx,
-                map_waypoints_dy);
+                map_waypoints_dy));
+          }
 
-            next_x_vals.push_back(xy_new[0]);
-            next_y_vals.push_back(xy_new[1]);
+          if (previous_path_x.size() > 0) {
+            next_x_vals.push_back(previous_path_x[0]);
+            next_y_vals.push_back(previous_path_y[0]);
+          } else {
+            next_x_vals.push_back(new_path[0][0]);
+            next_y_vals.push_back(new_path[0][1]);
+          }
+
+          for (int i = 1; i < new_path.size(); i++) {
+            double delta_x = new_path[i][0] - new_path[i-1][0];
+            double delta_y = new_path[i][1] - new_path[i-1][1];
+
+            next_x_vals.push_back(next_x_vals[i-1] + delta_x);
+            next_y_vals.push_back(next_y_vals[i-1] + delta_y);
           }
 
           msgJson["next_x"] = next_x_vals;
-          // msgJson["next_y"] = smooth(next_x_vals, next_y_vals);
           msgJson["next_y"] = next_y_vals;
 
           json j;
@@ -307,8 +329,8 @@ int main() {
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
-          this_thread::sleep_for(chrono::milliseconds(1000));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          this_thread::sleep_for(chrono::milliseconds(1000));
         }
       } else {
         // Manual driving

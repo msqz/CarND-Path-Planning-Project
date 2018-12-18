@@ -1,13 +1,18 @@
+#ifndef STATE_H
+#define STATE_H
+
 #include <math.h>
 #include <iostream>
 #include <map>
 #include <string>
 #include <vector>
-#include "car.h"
-#include "constraints.h"
 
-#ifndef STATE_H
-#define STATE_H
+std::map<std::string, std::vector<std::string>> STATES = {
+    {"STOP", {"ACC", "STOP"}},
+    {"ACC", {"CRUISE", "ACC", "DECC"}},
+    {"DECC", {"CRUISE", "STOP", "DECC", "ACC"}},
+    {"CRUISE", {"ACC", "DECC", "CRUISE"}},
+};
 
 class State {
  public:

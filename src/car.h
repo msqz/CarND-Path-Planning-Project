@@ -1,9 +1,9 @@
+#ifndef CAR_H
+#define CAR_H
+
 #include <map>
 #include <string>
 #include <vector>
-
-#ifndef CAR_H
-#define CAR_H
 
 struct Trajectory {
   std::vector<double> s;
