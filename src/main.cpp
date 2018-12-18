@@ -322,15 +322,14 @@ int main() {
           json j;
           j["next_s"] = trajectory.s;
           j["next_d"] = trajectory.d;
-          std::cout << "next_s: " << j["next_s"].dump() << "\n";
-          std::cout << "next_d: " << j["next_d"].dump() << "\n";
-          std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
-          std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
+          // std::cout << "next_s: " << j["next_s"].dump() << "\n";
+          // std::cout << "next_d: " << j["next_d"].dump() << "\n";
+          // std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
+          // std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
-
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           this_thread::sleep_for(chrono::milliseconds(1000));
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
         // Manual driving

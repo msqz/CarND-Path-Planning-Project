@@ -33,12 +33,15 @@ double evaluate_speed_limit(Trajectory trajectory) {
   return STOP_COST * (v_target - v_trajectory) / v_target;
 }
 
-double evaluate_max_acc(Trajectory trajectory) {
-  if (trajectory.s.size() < 2) {
-    return 0;
-  }
-  double s = trajectory.s[1] - trajectory.s[0];
-  double a = (2 * s) / pow(DELTA_T, 2);
+double evaluate_max_acc(Trajectory trajectory, Localization localization) {
+  double v_0 = localization.speed * MPH_TO_MS;
+  double v_1 = (trajectory.s[0] - localization.s) / DELTA_T;
+  double a = (v_1 - v_0) / DELTA_T;
+
+
+  // double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
+  // double s = trajectory.s[1] - trajectory.s[0];
+  // double a = (2 * s) / pow(DELTA_T, 2);
 
   return exp(a - MAX_ACC);
 }
@@ -48,15 +51,15 @@ double evaluate_efficiency(Trajectory trajectory) {
   return std::min(1.0, exp(-trajectory.get_velocity()));
 }
 
-double evaluate(Trajectory trajectory) {
+double evaluate(Trajectory trajectory, Localization localization) {
   double cost_speed_limit = evaluate_speed_limit(trajectory);
   std::cout << "    sl: " << cost_speed_limit << "\n";
-  // double cost_max_acc = evaluate_max_acc(trajectory);
-  // std::cout << "    ma: " << cost_max_acc << "\n";
-  // double cost_efficiency = evaluate_efficiency(trajectory);
-  // std::cout << "    ef: " << cost_efficiency << "\n";
+  double cost_max_acc = evaluate_max_acc(trajectory, localization);
+  std::cout << "    ma: " << cost_max_acc << "\n";
+  double cost_efficiency = evaluate_efficiency(trajectory);
+  std::cout << "    ef: " << cost_efficiency << "\n";
   // other costs
-  double cost = cost_speed_limit;  // + cost_efficiency;
+  double cost = cost_speed_limit + cost_max_acc + cost_efficiency;
   std::cout << "    --: " << cost << "\n";
   return cost;
 }
@@ -103,9 +106,9 @@ Trajectory Car::get_trajectory() {
     for (const std::string &transition : STATES[this->state]) {
       Trajectory trajectory = build_trajectory(transition);
       std::cout << "  transition: " << transition << ":\n";
-      double cost = evaluate(trajectory);
+      double cost = evaluate(trajectory, this->localization);
       state_to_cost[transition] = {cost, trajectory};
-      cost_avg += cost;
+      cost_avg += cost;double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
     }
     cost_avg /= STATES[this->state].size();
 
