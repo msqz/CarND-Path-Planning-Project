@@ -122,10 +122,31 @@ vector<double> getFrenet(double x, double y, double theta, const vector<double> 
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
-vector<double> getXY(double s, double d, const vector<double> &maps_s, const vector<double> &maps_x, const vector<double> &maps_y) {
-  int prev_wp = -1;
+vector<double> getXY(
+    double s,
+    double d,
+    const vector<double> &maps_s,
+    const vector<double> &maps_x,
+    const vector<double> &maps_y,
+    const vector<double> &maps_dx,
+    const vector<double> &maps_dy) {
+  vector<double> waypoints_normalized;
+  for (int i = 0; i < maps_s.size(); i++) {
+    int preceeding_wp = i - 1;
+    if (preceeding_wp < 0) {
+      preceeding_wp = maps_s.size() - abs(preceeding_wp);
+    }
+    double angle_prev = atan2(maps_dy[preceeding_wp], maps_dx[preceeding_wp]);
+    double angle_current = atan2(maps_dy[i], maps_dx[i]);
+    double angle = abs(angle_prev - angle_current) / 2.0;
+    double norm = (angle/2*M_PI) * (2.0 * M_PI * d); 
+    double waypoint_s_norm = maps_s[i] + norm;
 
-  while (s > maps_s[prev_wp + 1] && (prev_wp < (int)(maps_s.size() - 1))) {
+    waypoints_normalized.push_back(waypoint_s_norm);
+  }
+
+  int prev_wp = -1;
+  while (s > waypoints_normalized[prev_wp + 1] && (prev_wp < (int)(waypoints_normalized.size() - 1))) {
     prev_wp++;
   }
 
@@ -134,6 +155,8 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
   double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
   // the x,y,s along the segment
   double seg_s = (s - maps_s[prev_wp]);
+  // double seg_s = (s - prev_wp_s_norm);
+  // double seg_s = (s - waypoints_normalized[prev_wp]);
 
   double seg_x = maps_x[prev_wp] + seg_s * cos(heading);
   double seg_y = maps_y[prev_wp] + seg_s * sin(heading);
@@ -262,7 +285,9 @@ int main() {
                 trajectory.d[i],
                 map_waypoints_s,
                 map_waypoints_x,
-                map_waypoints_y);
+                map_waypoints_y,
+                map_waypoints_dx,
+                map_waypoints_dy);
 
             next_x_vals.push_back(xy_new[0]);
             next_y_vals.push_back(xy_new[1]);
@@ -275,14 +300,14 @@ int main() {
           json j;
           j["next_s"] = trajectory.s;
           j["next_d"] = trajectory.d;
-          std::cout << "next_s: " << j["next_s"].dump() <<"\n";
-          std::cout << "next_d: " << j["next_d"].dump() <<"\n";
+          std::cout << "next_s: " << j["next_s"].dump() << "\n";
+          std::cout << "next_d: " << j["next_d"].dump() << "\n";
           std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
           std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
-          // this_thread::sleep_for(chrono::milliseconds(1000));
+          this_thread::sleep_for(chrono::milliseconds(1000));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
