@@ -6,6 +6,9 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "constraints.h"
+#include "localization.h"
+#include "path.h"
 
 std::map<std::string, std::vector<std::string>> STATES = {
     {"STOP", {"ACC", "STOP"}},
@@ -16,13 +19,13 @@ std::map<std::string, std::vector<std::string>> STATES = {
 
 class State {
  public:
-  virtual Trajectory build_trajectory(const Localization &localization) = 0;
+  virtual Path build_path(const Localization &localization){};
 };
 
-class AccState : State {
+class AccState : public State {
  public:
-  Trajectory build_trajectory(const Localization &localization) {
-    Trajectory trajectory;
+  Path build_path(const Localization &localization) {
+    Path path;
 
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
@@ -32,34 +35,34 @@ class AccState : State {
       double v = v_init + (0.9 * MAX_ACC) * t;
       double s = (v_init + v) * t / 2;
 
-      trajectory.s.push_back(s_init + s);
-      trajectory.d.push_back(localization.d);
+      path.s.push_back(s_init + s);
+      path.d.push_back(localization.d);
     }
 
-    return trajectory;
+    return path;
   }
 };
 
-class CruiseState : State {
+class CruiseState : public State {
  public:
-  Trajectory build_trajectory(const Localization &localization) {
-    Trajectory trajectory;
+  Path build_path(const Localization &localization) {
+    Path path;
     double s_init = localization.s;
     double v = localization.speed * MPH_TO_MS;
     for (int i = 0; i < TRAJECTORY_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
       double s = v * t;
-      trajectory.s.push_back(s_init + s);
-      trajectory.d.push_back(localization.d);
+      path.s.push_back(s_init + s);
+      path.d.push_back(localization.d);
     }
-    return trajectory;
+    return path;
   }
 };
 
-class DeccState : State {
+class DeccState : public State {
  public:
-  Trajectory build_trajectory(const Localization &localization) {
-    Trajectory trajectory;
+  Path build_path(const Localization &localization) {
+    Path path;
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
 
@@ -68,20 +71,20 @@ class DeccState : State {
       double v = v_init - MAX_ACC * t;
       double s = (v_init + v) * t / 2;
 
-      trajectory.s.push_back(s_init + s);
-      trajectory.d.push_back(localization.d);
+      path.s.push_back(s_init + s);
+      path.d.push_back(localization.d);
     }
-    return trajectory;
+    return path;
   }
 };
 
-class StopState : State {
+class StopState : public State {
  public:
-  Trajectory build_trajectory(const Localization &localization) {
-    Trajectory trajectory;
-    trajectory.s.push_back(localization.s);
-    trajectory.d.push_back(localization.d);
-    return trajectory;
+  Path build_path(const Localization &localization) {
+    Path path;
+    path.s.push_back(localization.s);
+    path.d.push_back(localization.d);
+    return path;
   }
 };
 

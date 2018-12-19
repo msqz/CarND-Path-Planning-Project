@@ -1,27 +1,54 @@
-
-#include "car.h"
-#include <math.h>
-#include <string.h>
-#include <functional>
-#include <limits>
-#include <map>
-#include <vector>
-#include "constraints.h"
+#include "path.h"
+#include "prediction.h"
 #include "state.h"
 
-Car::Car() {
-  this->state = "STOP";
+class BehaviorPlanner {
+ private:
+  std::string state = "STOP";
+  Prediction prediction;
+  Localization localization;
+
+  Path build_path(const std::string &state);
+
+ public:
+  void set_prediction(const Prediction prediction);
+  void set_localization(const Localization localization);
+
+  Path next();
+};
+
+void BehaviorPlanner::set_prediction(const Prediction prediction) {
+  this->prediction = prediction;
 }
 
-void Car::set_localization(Localization localization) {
+void BehaviorPlanner::set_localization(const Localization localization) {
   this->localization = localization;
 }
 
-std::string Car::get_state() {
-  return this->state;
+Path BehaviorPlanner::build_path(const std::string &state) {
+  Path path;
+
+  if (state == "ACC") {
+    AccState state = AccState();
+    return state.build_path(this->localization);
+  }
+  if (state == "CRUISE") {
+    CruiseState state = CruiseState();
+    return state.build_path(this->localization);
+  }
+  if (state == "DECC") {
+    DeccState state = DeccState();
+    return state.build_path(this->localization);
+  }
+  if (state == "STOP") {
+    StopState state = StopState();
+    return state.build_path(this->localization);
+  }
+
+  return path;
 }
 
-double evaluate_speed_limit(Trajectory trajectory) {
+double evaluate_speed_limit(Path trajectory) {
   double v_target = SPEED_LIMIT - BUFFER_V;
   double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
   std::cout << "    v: " << v_trajectory << "\n";
@@ -33,25 +60,21 @@ double evaluate_speed_limit(Trajectory trajectory) {
   return STOP_COST * (v_target - v_trajectory) / v_target;
 }
 
-double evaluate_max_acc(Trajectory trajectory, Localization localization) {
+double evaluate_max_acc(Path trajectory, Localization localization) {
   double v_0 = localization.speed * MPH_TO_MS;
   double v_1 = (trajectory.s[0] - localization.s) / DELTA_T;
   double a = (v_1 - v_0) / DELTA_T;
 
-
-  // double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
-  // double s = trajectory.s[1] - trajectory.s[0];
-  // double a = (2 * s) / pow(DELTA_T, 2);
-
   return exp(a - MAX_ACC);
 }
 
-double evaluate_efficiency(Trajectory trajectory) {
+double evaluate_efficiency(Path trajectory) {
   // time to reach the goal - map waypoint?
   return std::min(1.0, exp(-trajectory.get_velocity()));
 }
 
-double evaluate(Trajectory trajectory, Localization localization) {
+
+double evaluate(Path trajectory, Localization localization) {
   double cost_speed_limit = evaluate_speed_limit(trajectory);
   std::cout << "    sl: " << cost_speed_limit << "\n";
   double cost_max_acc = evaluate_max_acc(trajectory, localization);
@@ -64,34 +87,11 @@ double evaluate(Trajectory trajectory, Localization localization) {
   return cost;
 }
 
-Trajectory Car::build_trajectory(std::string state) {
-  Trajectory trajectory;
-
-  if (state == "ACC") {
-    AccState state = AccState();
-    return state.build_trajectory(this->localization);
-  }
-  if (state == "CRUISE") {
-    CruiseState state = CruiseState();
-    return state.build_trajectory(this->localization);
-  }
-  if (state == "DECC") {
-    DeccState state = DeccState();
-    return state.build_trajectory(this->localization);
-  }
-  if (state == "STOP") {
-    StopState state = StopState();
-    return state.build_trajectory(this->localization);
-  }
-
-  return trajectory;
-}
-
-//TODO remove setting state here
-Trajectory Car::get_trajectory() {
+// Try building on top of prev_path_s and _d
+Path BehaviorPlanner::next() {
   std::string state_next;
   double cost_min = std::numeric_limits<double>::infinity();
-  Trajectory trajectory_min;
+  Path path_min;
 
   std::cout << "\n";
   std::cout << "from: " << this->state << "\n";
@@ -99,16 +99,16 @@ Trajectory Car::get_trajectory() {
 
   if (STATES[this->state].size() == 1) {
     state_next = STATES[this->state][0];
-    Trajectory trajectory_min = build_trajectory(state_next);
+    path_min = this->build_path(state_next);
   } else {
-    std::map<std::string, std::tuple<double, Trajectory>> state_to_cost;
+    std::map<std::string, std::tuple<double, Path>> state_to_cost;
     double cost_avg = 0;
     for (const std::string &transition : STATES[this->state]) {
-      Trajectory trajectory = build_trajectory(transition);
+      Path path = build_path(transition);
       std::cout << "  transition: " << transition << ":\n";
-      double cost = evaluate(trajectory, this->localization);
-      state_to_cost[transition] = {cost, trajectory};
-      cost_avg += cost;double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
+      double cost = evaluate(path, this->localization);
+      state_to_cost[transition] = {cost, path};
+      cost_avg += cost;
     }
     cost_avg /= STATES[this->state].size();
 
@@ -121,7 +121,7 @@ Trajectory Car::get_trajectory() {
         if (cost < cost_min) {
           cost_min = cost;
           state_next = transition;
-          trajectory_min = std::get<1>(state_to_cost[state_next]);
+          path_min = std::get<1>(state_to_cost[state_next]);
         }
       }
     }
@@ -129,16 +129,13 @@ Trajectory Car::get_trajectory() {
     // If all transitions have equal cost, just keep the current state
     if (equal == true) {
       state_next = this->state;
-      trajectory_min = std::get<1>(state_to_cost[state_next]);
+      path_min = std::get<1>(state_to_cost[state_next]);
       std::cout << "keep\n";
     }
   }
   std::cout << "to: " << state_next << "\n";
   this->state = state_next;
-  return trajectory_min;
-}
+  std::cout<<"state set to: "<<this->state<<"\n";
 
-double Trajectory::get_velocity() {
-  // it's distance / (50 elements * 0.02s each) -> distance/1s
-  return this->s[49] - this->s[0];
-}
+  return path_min;
+};
