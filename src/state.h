@@ -32,7 +32,7 @@ class AccState : public State {
 
     for (int i = 0; i < TRAJECTORY_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init + (0.9 * MAX_ACC) * t;
+      double v = v_init + (0.9 * MAX_ACC * t);
       double s = (v_init + v) * t / 2;
 
       path.s.push_back(s_init + s);

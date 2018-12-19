@@ -19,21 +19,21 @@ void test_AccState() {
       .speed = 0,
   };
 
-  Trajectory t1 = state.build_trajectory(localization);
+  Path t1 = state.build_path(localization);
 
-  assert(abs(t1.s[0] - 0.002) < 0.0001);
-  assert(abs(t1.s[4] - 0.05) < 0.0001);
-  assert(abs(t1.s[9] - 0.2) < 0.0001);
-  assert(abs(t1.s[49] - 5.0) < 0.0001);
+  assert(abs(t1.s[0] - 0.0018) < 0.0001);
+  assert(abs(t1.s[4] - 0.045) < 0.0001);
+  assert(abs(t1.s[9] - 0.18) < 0.0001);
+  assert(abs(t1.s[49] - 4.5) < 0.0001);
 
   localization.s = t1.s[49];
   localization.speed = 10 * MS_TO_MPH;
-  Trajectory t2 = state.build_trajectory(localization);
+  Path t2 = state.build_path(localization);
 
-  assert(abs(t2.s[0] - 5.202) < 0.0001);
-  assert(abs(t2.s[4] - 6.05) < 0.0001);
-  assert(abs(t2.s[9] - 7.2) < 0.0001);
-  assert(abs(t2.s[49] - 20.0) < 0.0001);
+  assert(abs(t2.s[0] - 4.7018) < 0.0001);
+  assert(abs(t2.s[4] - 5.545) < 0.0001);
+  assert(abs(t2.s[9] - 6.68) < 0.0001);
+  assert(abs(t2.s[49] - 19.0) < 0.0001);
 }
 
 void test_CruiseState() {
@@ -47,12 +47,12 @@ void test_CruiseState() {
       .speed = 0,
   };
 
-  Trajectory t1 = state.build_trajectory(localization);
+  Path t1 = state.build_path(localization);
   assert(abs(t1.s[0] - 0) < 0.001);
   assert(abs(t1.s[49] - 0) < 0.001);
 
   localization.speed = 20 * MS_TO_MPH;
-  Trajectory t2 = state.build_trajectory(localization);
+  Path t2 = state.build_path(localization);
   assert(abs(t2.s[0] - 0.4) < 0.001);
   assert(abs(t2.s[49] - 20) < 0.001);
 }
@@ -68,7 +68,7 @@ void test_Trajectory_get_velocity() {
       .speed = 0,
   };
 
-  Trajectory t1 = state.build_trajectory(localization);
+  Path t1 = state.build_path(localization);
   assert(abs(t1.get_velocity() - 10) < 0.001);
 }
 
