@@ -120,12 +120,12 @@ int main() {
           };
           planner.set_localization(localization);
           Path path = planner.next();
-          Trajectory trajectory= generator.generate(path);
+          Trajectory trajectory = generator.generate(path);
           
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-
-          if (previous_path_x.size() > 0) {
+    
+          if (previous_path_x.size() > 0 && trajectory.size() > 1) {
             next_x_vals.push_back(previous_path_x[0]);
             next_y_vals.push_back(previous_path_y[0]);
           } else {

@@ -30,7 +30,7 @@ class AccState : public State {
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
 
-    for (int i = 0; i < TRAJECTORY_LENGTH; i++) {
+    for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
       double v = v_init + (0.9 * MAX_ACC * t);
       double s = (v_init + v) * t / 2;
@@ -49,7 +49,7 @@ class CruiseState : public State {
     Path path;
     double s_init = localization.s;
     double v = localization.speed * MPH_TO_MS;
-    for (int i = 0; i < TRAJECTORY_LENGTH; i++) {
+    for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
       double s = v * t;
       path.s.push_back(s_init + s);
@@ -66,9 +66,9 @@ class DeccState : public State {
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
 
-    for (int i = 0; i < TRAJECTORY_LENGTH; i++) {
+    for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init - MAX_ACC * t;
+      double v = v_init - (0.9 * MAX_ACC * t);
       double s = (v_init + v) * t / 2;
 
       path.s.push_back(s_init + s);
