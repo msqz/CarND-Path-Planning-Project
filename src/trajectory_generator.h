@@ -5,6 +5,9 @@
 #include "constraints.h"
 #include "localization.h"
 
+const int WAYPOINTS_AHEAD = 10;
+const int WAYPOINTS_BEHIND = 5;
+
 struct Map {
   std::vector<double> s;
   std::vector<double> x;
@@ -22,29 +25,28 @@ class TrajectoryGenerator {
   Map map;
 
   std::vector<double> get_xy(double s, double d) {
+    int n_waypoints = this->map.size();
     int next_wp;
-    for (int i = 0; i < this->map.size(); i++) {
+    for (int i = 0; i < n_waypoints; i++) {
       if (this->map.s[i] >= s) {
         next_wp = i;
         break;
       }
     }
 
-
-    int waypoints_no = this->map.size();
     int wp_behind = next_wp;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < WAYPOINTS_BEHIND; i++) {
       wp_behind = wp_behind - 1;
       // Handle leap to the end of the track
       if (wp_behind < 0) {
-        wp_behind = (waypoints_no + wp_behind);
+        wp_behind = (n_waypoints + wp_behind);
       }
-      wp_behind = wp_behind % waypoints_no;
+      wp_behind = wp_behind % n_waypoints;
     }
 
     int wp_ahead = next_wp;
-    for (int i = 0; i < 10; i++) {
-      wp_ahead = (wp_ahead + 1) % waypoints_no;
+    for (int i = 0; i < WAYPOINTS_AHEAD; i++) {
+      wp_ahead = (wp_ahead + 1) % n_waypoints;
     }
 
     std::vector<double> s_values;
@@ -57,12 +59,12 @@ class TrajectoryGenerator {
     int idx_start = wp_behind;
     int idx_end = wp_ahead;
     if (idx_start > idx_end) {
-      idx_end += this->map.size() + 1;
+      idx_end += n_waypoints + 1;
     }
     while (idx_start < idx_end) {
       int idx = idx_start;
-      if (idx > this->map.size()) {
-        idx -= this->map.size();
+      if (idx > n_waypoints) {
+        idx -= n_waypoints;
       }
 
       double s_value = this->map.s[idx];
@@ -113,6 +115,18 @@ Trajectory TrajectoryGenerator::generate(const Path &path){
     trajectory.x.push_back(xy[0]);
     trajectory.y.push_back(xy[1]);
   }
+
+  // Path path2;
+  // for (int i = 0; i < path.s.size(); i++) {
+  //   path2.d.push_back(path.d[i]);
+  //   path2.s.push_back(path.s[0] + (i * DELTA_T * (50 * MPH_TO_MS)));
+  // }
+  // for (int i = 0; i < path2.s.size(); i++) {
+  //   std::vector<double> xy = this->get_xy(path2.s[i], path2.d[i]);
+  //   trajectory.x.push_back(xy[0]);
+  //   trajectory.y.push_back(xy[1]);
+  // }
+
 
   return trajectory;
 };

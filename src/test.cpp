@@ -72,9 +72,25 @@ void test_Trajectory_get_velocity() {
   assert(abs(t1.get_velocity() - 10) < 0.001);
 }
 
+void test_DeccState() {
+  DeccState state;
+  Localization localization = {
+      .x = 0,
+      .y = 0,
+      .s = 100,
+      .d = 0,
+      .yaw = 0,
+      .speed = 10 * MS_TO_MPH,
+  };
+
+  Path p1 = state.build_path(localization);
+  assert(abs(p1.s[0] - 100.1982) < 0.001);
+}
+
 int main() {
   test_AccState();
   test_CruiseState();
+  test_DeccState();
   cout << "done\n";
 
   return 0;

@@ -13,18 +13,18 @@
 std::map<std::string, std::vector<std::string>> STATES = {
     {"STOP", {"ACC", "STOP"}},
     {"ACC", {"CRUISE", "ACC", "DECC"}},
-    {"DECC", {"CRUISE", "STOP", "DECC", "ACC"}},
+    {"DECC", {"CRUISE", "DECC", "ACC", "STOP"}},
     {"CRUISE", {"ACC", "DECC", "CRUISE"}},
 };
 
 class State {
  public:
-  virtual Path build_path(const Localization &localization){};
+  virtual Path build_path(const Localization localization){};
 };
 
 class AccState : public State {
  public:
-  Path build_path(const Localization &localization) {
+  Path build_path(const Localization localization) {
     Path path;
 
     double v_init = localization.speed * MPH_TO_MS;
@@ -32,7 +32,7 @@ class AccState : public State {
 
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init + (0.9 * MAX_ACC * t);
+      double v = v_init + (0.5 * MAX_ACC * t);
       double s = (v_init + v) * t / 2;
 
       path.s.push_back(s_init + s);
@@ -45,33 +45,40 @@ class AccState : public State {
 
 class CruiseState : public State {
  public:
-  Path build_path(const Localization &localization) {
+  Path build_path(const Localization localization) {
     Path path;
     double s_init = localization.s;
     double v = localization.speed * MPH_TO_MS;
+    // std::cout << "    s: " << s_init << ", v: " << v << "\n";
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
       double s = v * t;
       path.s.push_back(s_init + s);
+      // path.s.push_back(localization.s + (i * DELTA_T * (50 * MPH_TO_MS)));
       path.d.push_back(localization.d);
     }
+    // std::cout << "    v: " << path.get_velocity() * MS_TO_MPH << "\n";
     return path;
   }
 };
 
 class DeccState : public State {
  public:
-  Path build_path(const Localization &localization) {
+  Path build_path(const Localization localization) {
     Path path;
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
 
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init - (0.9 * MAX_ACC * t);
-      double s = (v_init + v) * t / 2;
+      double v = v_init - (0.5 * MAX_ACC * t);
+      double delta_s = (v_init + v) * t / 2;
+      double s = s_init + delta_s;
+      if (s < s_init) {
+        s = s_init;
+      }
 
-      path.s.push_back(s_init + s);
+      path.s.push_back(s);
       path.d.push_back(localization.d);
     }
     return path;
@@ -80,10 +87,12 @@ class DeccState : public State {
 
 class StopState : public State {
  public:
-  Path build_path(const Localization &localization) {
+  Path build_path(const Localization localization) {
     Path path;
-    path.s.push_back(localization.s);
-    path.d.push_back(localization.d);
+    for (int i = 0; i < PATH_LENGTH; i++) {
+      path.s.push_back(localization.s);
+      path.d.push_back(localization.d);
+    }
     return path;
   }
 };

@@ -98,6 +98,7 @@ int main() {
         string event = j[0].get<string>();
 
         if (event == "telemetry") {
+          auto start = std::chrono::system_clock::now();
           // j[1] is the data JSON object
 
           // Previous path data given to the Planner
@@ -117,15 +118,22 @@ int main() {
               .d = j[1]["d"],
               .yaw = j[1]["yaw"],
               .speed = j[1]["speed"],
+              .prev_path_s = end_path_s,
+              .prev_path_d = end_path_d,
           };
-          planner.set_localization(localization);
+          if (previous_path_x.size() == 0){
+            localization.prev_path_s = localization.s;
+            localization.prev_path_d = localization.d;
+          }
+
+          planner.set_localization(localization);          
           Path path = planner.next();
           Trajectory trajectory = generator.generate(path);
-          
+                            
           vector<double> next_x_vals;
           vector<double> next_y_vals;
     
-          if (previous_path_x.size() > 0 && trajectory.size() > 1) {
+          if (previous_path_x.size() > 0) {
             next_x_vals.push_back(previous_path_x[0]);
             next_y_vals.push_back(previous_path_y[0]);
           } else {
@@ -153,8 +161,14 @@ int main() {
           // std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
-          this_thread::sleep_for(chrono::milliseconds(1000));
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          auto end = std::chrono::system_clock::now();
+          std::chrono::duration<double> elapsed = end-start;
+          std::cout << "took: " << elapsed.count() * 1000 << "ms\n";
+
+          int sleep_time = 1000 - (elapsed.count()*1000);
+          std::cout<<"sleep for: " << sleep_time << "\n";
+          this_thread::sleep_for(chrono::milliseconds(sleep_time));
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);          
         }
       } else {
         // Manual driving
