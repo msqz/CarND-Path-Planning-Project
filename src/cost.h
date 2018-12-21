@@ -55,7 +55,9 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
   double t_stop = v_max / BRAKING_DECC;
-  double s_stop = path.s.front() + (v_max * t_stop) - ((BRAKING_DECC * (t_stop * t_stop)) / 2) + FRONT_DISTANCE;
+  double s_stop = path.s.front() +
+                  (v_max * t_stop) - ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
+                  FRONT_DISTANCE;
 
   double cost_max = 0.0;
   for (const Obstacle &obstacle : obstacles) {
@@ -63,11 +65,10 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
     if (path.contains_d(obstacle.d, 2.0) && path.contains_s(obstacle.s)) {
       double distance = obstacle.s - s_stop;
       if (distance < 0) {
-        // double cost = exp(-distance);
-        // if (cost > cost_max) {
-        //   cost_max = cost;
-        // }
-        cost_max = 1;
+        // I want to handle scenario when all paths are going to hit
+        // but the one with the largest distance can be selected
+        // For negative distance being closer means higher value
+        cost_max = 1 + abs(distance);
       }
     }
   }

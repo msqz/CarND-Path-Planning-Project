@@ -15,7 +15,7 @@ const double MS_TO_MPH = 1 / 0.447;
 const int PATH_LENGTH = 100;
 const double TRACK_LENGTH = 6945.554;
 const double LANE_WIDTH = 4.0;
-const double BRAKING_DECC = 0.9 * MAX_ACC;
+const double BRAKING_DECC = 0.7 * MAX_ACC;
 const double FRONT_DISTANCE = 4.0;
 
 #endif /* CONSTRAINTS_H */
