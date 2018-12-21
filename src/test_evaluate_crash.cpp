@@ -8,22 +8,23 @@
 #include "path.h"
 
 // v=30m/s requires 64.125m + 4.0m of FRONT_DISTANCE to stop completely
-Path build_path(double s, double v) {
+Path build_path(double s, double d, double v) {
   Path path;
   for (int i = 0; i < PATH_LENGTH; i++) {
     path.s.push_back(s + i * v * DELTA_T);
-    path.d.push_back(0);
+    path.d.push_back(d);
   }
   return path;
 }
 
 void given_insufficient_distance_should_return_1() {
+  double v = 30;
   Localization localization;
   localization.s = 0;
-  double v = 30;
-  Path path = build_path(localization.s, v);
+  Path path = build_path(localization.s, 0, v);
   Obstacle obstacle;
   obstacle.s = 64.125 + FRONT_DISTANCE - 1;
+  obstacle.d = 0;
   std::vector<Obstacle> obstacles{obstacle};
 
   double cost = evaluate_crash(path, localization, obstacles);
@@ -32,12 +33,13 @@ void given_insufficient_distance_should_return_1() {
 }
 
 void given_sufficient_distance_should_return_0() {
+  double v = 30;
   Localization localization;
   localization.s = 0;
-  double v = 30;
-  Path path = build_path(localization.s, v);
+  Path path = build_path(localization.s, 0, v);
   Obstacle obstacle;
   obstacle.s = 64.125 + FRONT_DISTANCE + 1;
+  obstacle.d = 0;
   std::vector<Obstacle> obstacles{obstacle};
 
   double cost = evaluate_crash(path, localization, obstacles);
