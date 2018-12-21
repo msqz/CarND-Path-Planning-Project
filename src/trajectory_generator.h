@@ -80,6 +80,8 @@ class TrajectoryGenerator {
       ++idx_start;
     }
 
+    // TODO Handle end of the track:
+    // Assertion `m_x[i]<m_x[i+1]' failed
     tk::spline spline_s_x;
     spline_s_x.set_points(s_values, x_values);
 
@@ -115,18 +117,6 @@ Trajectory TrajectoryGenerator::generate(const Path &path){
     trajectory.x.push_back(xy[0]);
     trajectory.y.push_back(xy[1]);
   }
-
-  // Path path2;
-  // for (int i = 0; i < path.s.size(); i++) {
-  //   path2.d.push_back(path.d[i]);
-  //   path2.s.push_back(path.s[0] + (i * DELTA_T * (50 * MPH_TO_MS)));
-  // }
-  // for (int i = 0; i < path2.s.size(); i++) {
-  //   std::vector<double> xy = this->get_xy(path2.s[i], path2.d[i]);
-  //   trajectory.x.push_back(xy[0]);
-  //   trajectory.y.push_back(xy[1]);
-  // }
-
 
   return trajectory;
 };

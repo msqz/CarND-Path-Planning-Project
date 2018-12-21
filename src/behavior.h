@@ -1,37 +1,36 @@
 #include "path.h"
-#include "prediction.h"
+#include "obstacle.h"
 #include "state.h"
+#include "cost.h"
 
 const double SPEED_LIMIT_WEIGHT = 10.0;
 const double MAX_ACC_WEIGHT = 2.0;
 const double EFFICIENCY_WEIGHT = 1.0;
-
-double sigmoid(double x) {
-  return 1 / (1 + exp(-x));
-}
+const double CRASH_WEIGHT = 20.0;
 
 class BehaviorPlanner {
  private:
   std::string state = "STOP";
-  Prediction prediction;
+  std::vector<Obstacle> obstacles;
   Localization localization;
   Localization localization_internal;
   Path path_prev;
 
   Path build_path(const std::string &state);
+  double evaluate_path(const Path &path);
 
  public:
-  void set_prediction(const Prediction prediction);
-  void set_localization(const Localization localization);
+  void set_obstacles(const std::vector<Obstacle> &obstacles);
+  void set_localization(const Localization &localization);
 
   Path next();
 };
 
-void BehaviorPlanner::set_prediction(const Prediction prediction) {
-  this->prediction = prediction;
+void BehaviorPlanner::set_obstacles(const std::vector<Obstacle> &obstacles) {
+  this->obstacles = obstacles;
 }
 
-void BehaviorPlanner::set_localization(const Localization localization) {
+void BehaviorPlanner::set_localization(const Localization &localization) {
   this->localization = localization;
 }
 
@@ -58,59 +57,20 @@ Path BehaviorPlanner::build_path(const std::string &state) {
   return path;
 }
 
-double evaluate_speed_limit(Path trajectory) {
-  double v_target = SPEED_LIMIT - BUFFER_V;
-  double v_trajectory = trajectory.get_velocity() * MS_TO_MPH;
-  std::cout << "    v: " << v_trajectory << "\n";
-
-  if (v_trajectory > SPEED_LIMIT) {
-    return 1;
-  }
-  return 0;
-}
-
-double evaluate_max_acc(Path trajectory, Localization localization) {
-  for (int i = 2; i < trajectory.size(); i++) {
-    double v_0 = (trajectory.s[i - 1] - trajectory.s[i - 2]) / DELTA_T;
-    double v_1 = (trajectory.s[i] - trajectory.s[i - 1]) / DELTA_T;
-    double a = (v_1 - v_0) / DELTA_T;
-    if (a > MAX_ACC) {
-      return 1;
-    }
-  };
-
-  return 0;
-}
-
-double evaluate_efficiency(Path trajectory) {
-  // Average speed
-  double velocity_sum;
-
-  for (int i = 1; i < trajectory.s.size(); i++) {
-    velocity_sum += (trajectory.s[i] - trajectory.s[i - 1]) / DELTA_T;
-  }
-
-  if (velocity_sum == 0) {
-    return 1;
-  }
-
-  double velocity_avg = velocity_sum / (double)trajectory.size();
-  if (velocity_avg <= 0) {
-    return 1;
-  }
-
-  return 1 / velocity_avg;
-}
-
-double evaluate(Path trajectory, Localization localization) {
-  double cost_speed_limit = SPEED_LIMIT_WEIGHT * evaluate_speed_limit(trajectory);
+double BehaviorPlanner::evaluate_path(const Path &path) {
+  double cost_speed_limit = SPEED_LIMIT_WEIGHT * evaluate_speed_limit(path);
   std::cout << "    sl: " << cost_speed_limit << "\n";
-  double cost_max_acc = MAX_ACC_WEIGHT * evaluate_max_acc(trajectory, localization);
+  
+  double cost_max_acc = MAX_ACC_WEIGHT * evaluate_max_acc(path, this->localization);
   std::cout << "    ma: " << cost_max_acc << "\n";
-  double cost_efficiency = EFFICIENCY_WEIGHT * evaluate_efficiency(trajectory);
+  
+  double cost_efficiency = EFFICIENCY_WEIGHT * evaluate_efficiency(path);
   std::cout << "    ef: " << cost_efficiency << "\n";
-  // other costs
-  double cost = cost_speed_limit + cost_max_acc + cost_efficiency;
+  
+  double cost_crash = CRASH_WEIGHT * evaluate_crash(path, this->localization, this->obstacles);
+  std::cout << "    cr: " << cost_crash << "\n";
+  
+  double cost = cost_speed_limit + cost_max_acc + cost_efficiency + cost_crash;
   std::cout << "    --: " << cost << "\n";
   return cost;
 }
@@ -120,25 +80,13 @@ Path BehaviorPlanner::next() {
   double cost_min = std::numeric_limits<double>::infinity();
   Path path_min;
 
-  //it sleeps 1sec between the cycles
-  double point_idx = 0;
-  for (int i = 1; i < this->path_prev.size(); i++) {
-    if (this->path_prev.s[i-1] <= localization.s && localization.s <= this->path_prev.s[i]) {
-      point_idx = i;
-    }
-  }
-  double v_point = 0.0;
-  if (point_idx > 0){
-    v_point = (this->path_prev.s[point_idx] - this->path_prev.s[point_idx-1]) / DELTA_T;
-    this->localization.speed = v_point * MS_TO_MPH;
-  }
+  // This is the crucial part to overcome the latency
+  this->localization.speed = this->path_prev.get_velocity(this->localization.s) * MS_TO_MPH;
 
   std::cout << "\n";
   std::cout << "from: " << this->state << "\n";
   std::cout << "  v: " << this->localization.speed
             << " s: " << this->localization.s
-            << " point: " << point_idx
-            << " v_point: " << v_point * MS_TO_MPH
             << "\n";
 
   if (STATES[this->state].size() == 1) {
@@ -150,7 +98,7 @@ Path BehaviorPlanner::next() {
     for (const std::string &transition : STATES[this->state]) {
       Path path = build_path(transition);
       std::cout << "  transition: " << transition << ":\n";
-      double cost = evaluate(path, this->localization);
+      double cost = this->evaluate_path(path);
       state_to_cost[transition] = {cost, path};
       cost_avg += cost;
     }

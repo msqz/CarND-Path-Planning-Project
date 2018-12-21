@@ -32,7 +32,7 @@ class AccState : public State {
 
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init + (0.5 * MAX_ACC * t);
+      double v = v_init + (0.4 * MAX_ACC * t);
       double s = (v_init + v) * t / 2;
 
       path.s.push_back(s_init + s);
@@ -49,19 +49,23 @@ class CruiseState : public State {
     Path path;
     double s_init = localization.s;
     double v = localization.speed * MPH_TO_MS;
-    // std::cout << "    s: " << s_init << ", v: " << v << "\n";
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
       double s = v * t;
       path.s.push_back(s_init + s);
-      // path.s.push_back(localization.s + (i * DELTA_T * (50 * MPH_TO_MS)));
       path.d.push_back(localization.d);
     }
-    // std::cout << "    v: " << path.get_velocity() * MS_TO_MPH << "\n";
     return path;
   }
 };
 
+// Brake is for emergency decceleration when other car cuts off 
+// Need to have jerk calculation for that
+class BrakeState : public State {
+
+};
+
+// Decc is for maintaining the speed when approaching obstacle
 class DeccState : public State {
  public:
   Path build_path(const Localization localization) {
@@ -71,7 +75,7 @@ class DeccState : public State {
 
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init - (0.5 * MAX_ACC * t);
+      double v = v_init - (BRAKING_DECC * t);
       double delta_s = (v_init + v) * t / 2;
       double s = s_init + delta_s;
       if (s < s_init) {

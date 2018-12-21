@@ -7,11 +7,11 @@
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
+#include "behavior.h"
 #include "json.hpp"
 #include "localization.h"
-#include "behavior.h"
-#include "trajectory_generator.h"
 #include "path.h"
+#include "trajectory_generator.h"
 
 using namespace std;
 
@@ -73,17 +73,17 @@ int main() {
   }
 
   Map map = {
-    .s = map_waypoints_s,
-    .x = map_waypoints_x,
-    .y = map_waypoints_y,
-    .dx = map_waypoints_dx,
-    .dy = map_waypoints_dy,
+      .s = map_waypoints_s,
+      .x = map_waypoints_x,
+      .y = map_waypoints_y,
+      .dx = map_waypoints_dx,
+      .dy = map_waypoints_dy,
   };
   TrajectoryGenerator generator(map);
   BehaviorPlanner planner;
 
   h.onMessage([&planner, &generator](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                                                                                                                 uWS::OpCode opCode) {
+                                     uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -118,21 +118,28 @@ int main() {
               .d = j[1]["d"],
               .yaw = j[1]["yaw"],
               .speed = j[1]["speed"],
-              .prev_path_s = end_path_s,
-              .prev_path_d = end_path_d,
           };
-          if (previous_path_x.size() == 0){
-            localization.prev_path_s = localization.s;
-            localization.prev_path_d = localization.d;
-          }
+          planner.set_localization(localization);
 
-          planner.set_localization(localization);          
+          std::vector<Obstacle> obstacles;
+          for (int i = 0; i < sensor_fusion.size(); i++) {
+            obstacles.push_back(Obstacle{
+                .id = sensor_fusion[i][0],
+                .x = sensor_fusion[i][1],
+                .y = sensor_fusion[i][2],
+                .v_x = sensor_fusion[i][3],
+                .v_y = sensor_fusion[i][4],
+                .s = sensor_fusion[i][5],
+                .d = sensor_fusion[i][6],
+            });
+          }
+          planner.set_obstacles(obstacles);
           Path path = planner.next();
           Trajectory trajectory = generator.generate(path);
-                            
+
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-    
+
           if (previous_path_x.size() > 0) {
             next_x_vals.push_back(previous_path_x[0]);
             next_y_vals.push_back(previous_path_y[0]);
@@ -142,11 +149,11 @@ int main() {
           }
 
           for (int i = 1; i < trajectory.size(); i++) {
-            double delta_x = trajectory.x[i] - trajectory.x[i-1];
-            double delta_y = trajectory.y[i] - trajectory.y[i-1];
+            double delta_x = trajectory.x[i] - trajectory.x[i - 1];
+            double delta_y = trajectory.y[i] - trajectory.y[i - 1];
 
-            next_x_vals.push_back(next_x_vals[i-1] + delta_x);
-            next_y_vals.push_back(next_y_vals[i-1] + delta_y);
+            next_x_vals.push_back(next_x_vals[i - 1] + delta_x);
+            next_y_vals.push_back(next_y_vals[i - 1] + delta_y);
           }
 
           msgJson["next_x"] = next_x_vals;
@@ -161,14 +168,15 @@ int main() {
           // std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
-          auto end = std::chrono::system_clock::now();
-          std::chrono::duration<double> elapsed = end-start;
-          std::cout << "took: " << elapsed.count() * 1000 << "ms\n";
 
-          int sleep_time = 1000 - (elapsed.count()*1000);
-          std::cout<<"sleep for: " << sleep_time << "\n";
+          auto end = std::chrono::system_clock::now();
+          std::chrono::duration<double> elapsed = end - start;
+          std::cout << "took: " << elapsed.count() * 1000 << "ms\n";
+          int sleep_time = 100 - (elapsed.count() * 1000);
+          std::cout << "sleep for: " << sleep_time << "\n";
+
           this_thread::sleep_for(chrono::milliseconds(sleep_time));
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);          
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
         // Manual driving

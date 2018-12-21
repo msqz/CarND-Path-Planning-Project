@@ -8,17 +8,57 @@ struct Path {
   std::vector<double> s;
   std::vector<double> d;
 
-  double get_velocity(int at = 0) {
-    // it's distance / (50 elements * 0.02s each) -> distance/1s
-    // if (at != 0) {
-    //   return (this->s[at] - this->s[at-1]) / DELTA_T;
-    // }
-
-    if (this->size() < 50) {
-      return 0;
+  double get_velocity(double s) {
+    double v = 0.0;
+    for (int i = 1; i < this->size(); i++) {
+      if (this->s[i - 1] <= s && s <= this->s[i]) {
+        v = (this->s[i] - this->s[i - 1]) / DELTA_T;
+      }
     }
-    return this->s[49] - this->s[0];
-    // return (this->s[this->size()-1] - this->s[this->size()-2]) /DELTA_T;
+
+    return v;
+  }
+
+  double get_max_velocity() {
+    double v_max = 0.0;
+    for (int i = 1; i < (1 / DELTA_T); i++) {
+      double v = (this->s[i] - this->s[i - 1]) / DELTA_T;
+      if (v > v_max) {
+        v_max = v;
+      }
+    }
+    return v_max;
+  }
+
+  double get_max_acc() {
+    double a_max = 0.0;
+    for (int i = 2; i < this->size(); i++) {
+      double v_0 = (this->s[i - 1] - this->s[i - 2]) / DELTA_T;
+      double v_1 = (this->s[i] - this->s[i - 1]) / DELTA_T;
+      double a = (v_1 - v_0) / DELTA_T;
+      if (a > a_max) {
+        a_max = a;
+      }
+    }
+    return a_max;
+  }
+
+  bool contains_s(double s, double margin = 0) {
+    if (this->s.front() - margin <= s && s <= this->s.back() + margin) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool contains_d(double d, double margin = 0) {
+    for (const double &d_path : this->d) {
+      if (d_path - margin <= d && d <= d_path + margin) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   int size() {

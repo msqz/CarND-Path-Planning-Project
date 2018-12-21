@@ -8,8 +8,6 @@ struct Localization {
   double d;
   double yaw;
   double speed;
-  double prev_path_s;
-  double prev_path_d;
 };
 
 #endif
