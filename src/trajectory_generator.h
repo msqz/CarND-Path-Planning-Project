@@ -112,6 +112,7 @@ TrajectoryGenerator::TrajectoryGenerator(const Map &map) {
 
 Trajectory TrajectoryGenerator::generate(const Path &path){
   Trajectory trajectory;
+
   for (int i = 0; i < path.s.size(); i++) {
     std::vector<double> xy = this->get_xy(path.s[i], path.d[i]);
     trajectory.x.push_back(xy[0]);

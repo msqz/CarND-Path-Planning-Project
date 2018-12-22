@@ -17,6 +17,10 @@ std::map<std::string, std::vector<std::string>> STATES = {
     {"CRUISE", {"ACC", "DECC", "CRUISE"}},
 };
 
+std::map<std::string, std::vector<std::string>> STATES_D = {
+    {"STRAIGHT", {"STRAIGHT"}},
+};
+
 class State {
  public:
   virtual Path build_path(const Localization localization){};
@@ -59,10 +63,9 @@ class CruiseState : public State {
   }
 };
 
-// Brake is for emergency decceleration when other car cuts off 
+// Brake is for emergency decceleration when other car cuts off
 // Need to have jerk calculation for that
 class BrakeState : public State {
-
 };
 
 // Decc is for maintaining the speed when approaching obstacle
@@ -97,6 +100,39 @@ class StopState : public State {
       path.s.push_back(localization.s);
       path.d.push_back(localization.d);
     }
+    return path;
+  }
+};
+
+class StraightState : public State {
+ public:
+  Path build_path(const Localization localization) {
+    Path path;
+    for (int i = 0; i < PATH_LENGTH; i++) {
+      path.d.push_back(localization.d);
+    }
+    return path;
+  }
+};
+
+class LeftState : public CruiseState {
+};
+
+class RightState : public CruiseState {
+ public:
+  Path build_path(const Localization localization) {
+    Path path = CruiseState::build_path(localization);
+    int lane_current = localization.d / LANE_WIDTH;
+    // Move to the center of right lane
+
+    int d_target = ((lane_current + 1) * LANE_WIDTH) + (LANE_WIDTH / 2);
+    double distance_d = d_target - localization.d;
+    for (int i = 0; i < PATH_LENGTH; i++) {
+      path.d[i] = localization.d + distance_d;
+    }
+    // std::cout << "    d: " << localization.d << "\n";
+    // std::cout << "    d_path: " << path.d.back() << "\n";
+
     return path;
   }
 };

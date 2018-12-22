@@ -75,4 +75,21 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
   return cost_max;
 }
 
+double evaluate_offroad(Path path) {
+  for (const double &d : path.d) {
+    if (d < 2.0 || d > 10.0) {
+      // return 1;
+      return 0;
+    }
+  }
+  return 0;
+}
+
+double evaluate_keep_right(Path path) {
+  if (path.d.back() < 9.0) {
+    return 1;
+  }
+  return 0;
+}
+
 #endif
