@@ -61,7 +61,7 @@ Path BehaviorPlanner::build_path(const std::string &state) {
   }
   if (state == "LEFT") {
     LeftState state = LeftState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "RIGHT") {
     RightState state = RightState();

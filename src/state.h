@@ -132,66 +132,13 @@ class StopState : public State {
   }
 };
 
-class StraightState : public State {
+template<int direction>
+class BaseSteeringState {
  public:
+  /**
+   * direction: -1 left, 0 straight, 1 right
+   */
   Path build_path(const Localization localization, Path path_prev) {
-        int lane_current = -1;
-    if (0 <= localization.d && localization.d <= LANE_WIDTH) {
-      lane_current = 0;
-    } else if (LANE_WIDTH <= localization.d && localization.d < 2.0 * LANE_WIDTH) {
-      lane_current = 1;
-    } else if (2.0 * LANE_WIDTH <= localization.d && localization.d < 3.0 * LANE_WIDTH) {
-      lane_current = 2;
-    }
-
-    // Move to the center of right lane
-    double d_target = ((lane_current) * LANE_WIDTH) + (LANE_WIDTH / 2);
-    double distance_d = d_target - localization.d;
-
-    std::vector<double> start_d{
-        localization.d,
-        path_prev.get_velocity_d(localization.d),
-        0,
-    };
-
-    std::vector<double> end_d{
-        (double)d_target,
-        0,
-        0,
-    };
-
-    std::vector<double> alphas_d = JMT(start_d, end_d, 2.0);
-
-    Path path;
-    for (int i = 0; i < PATH_LENGTH; i++) {
-      double t = i * DELTA_T;
-      double d = alphas_d[0] +
-                 alphas_d[1] * t +
-                 alphas_d[2] * pow(t, 2) +
-                 alphas_d[3] * pow(t, 3) +
-                 alphas_d[4] * pow(t, 4) +
-                 alphas_d[5] * pow(t, 5);
-
-      path.d.push_back(d);
-    }
-
-    json j;
-    j["s"] = path.d;
-    j["d"] = path.d;
-    std::cout << "      jmt_s: " << j["s"].dump() << "\n";
-    std::cout << "      jmt_d: " << j["d"].dump() << "\n";
-
-    return path;
-  }
-};
-
-class LeftState : public CruiseState {
-};
-
-class RightState : public CruiseState {
- public:
-  Path build_path(const Localization localization, Path path_prev) {
-    // TODO handle out of any lane (lane == -1)
     int lane_current = -1;
     if (0 <= localization.d && localization.d <= LANE_WIDTH) {
       lane_current = 0;
@@ -202,7 +149,7 @@ class RightState : public CruiseState {
     }
 
     // Move to the center of right lane
-    double d_target = ((lane_current + 1) * LANE_WIDTH) + (LANE_WIDTH / 2);
+    double d_target = ((lane_current + direction) * LANE_WIDTH) + (LANE_WIDTH / 2);
     double distance_d = d_target - localization.d;
 
     std::vector<double> start_d{
@@ -240,6 +187,15 @@ class RightState : public CruiseState {
 
     return path;
   }
+};
+
+class StraightState : public BaseSteeringState<0> {
+};
+
+class LeftState : public BaseSteeringState<-1> {
+};
+
+class RightState : public BaseSteeringState<1> {
 };
 
 #endif
