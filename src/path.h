@@ -19,15 +19,27 @@ struct Path {
     return v;
   }
 
+  // only for cost calculations purpose
   double get_max_velocity() {
     double v_max = 0.0;
-    for (int i = 1; i < (1 / DELTA_T); i++) {
+    for (int i = 1; i < this->s.size(); i++) {
       double v = (this->s[i] - this->s[i - 1]) / DELTA_T;
       if (v > v_max) {
         v_max = v;
       }
     }
     return v_max;
+  }
+
+  double get_velocity_d(double d) {
+    double v = 0.0;
+    for (int i = 1; i < this->size(); i++) {
+      if (this->d[i - 1] <= d && d <= this->d[i]) {
+        v = (this->d[i] - this->d[i - 1]) / DELTA_T;
+      }
+    }
+
+    return v;
   }
 
   double get_max_acc() {

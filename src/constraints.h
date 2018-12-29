@@ -17,5 +17,6 @@ const double TRACK_LENGTH = 6945.554;
 const double LANE_WIDTH = 4.0;
 const double BRAKING_DECC = 0.7 * MAX_ACC;
 const double FRONT_DISTANCE = 4.0;
+const double MAX_JERK = 100;
 
 #endif /* CONSTRAINTS_H */

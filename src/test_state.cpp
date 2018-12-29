@@ -87,10 +87,23 @@ void test_DeccState() {
   assert(abs(p1.s[0] - 100.1982) < 0.001);
 }
 
+void test_RightState() {
+  RightState state;
+  Localization localization = {
+      .x = 0,
+      .y = 0,
+      .s = 100,
+      .d = 0,
+      .yaw = 0,
+      .speed = 10 * MS_TO_MPH,
+  };
+}
+
 int main() {
   test_AccState();
   test_CruiseState();
   test_DeccState();
+  test_RightState();
   cout << "done\n";
 
   return 0;

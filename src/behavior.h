@@ -57,7 +57,7 @@ Path BehaviorPlanner::build_path(const std::string &state) {
   }
   if (state == "STRAIGHT") {
     StraightState state = StraightState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "LEFT") {
     LeftState state = LeftState();
@@ -65,7 +65,7 @@ Path BehaviorPlanner::build_path(const std::string &state) {
   }
   if (state == "RIGHT") {
     RightState state = RightState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
 
   return path;
@@ -113,17 +113,15 @@ Path BehaviorPlanner::next() {
   std::cout << "\n";
   std::cout << "from: " << this->state_s << "/" << this->state_d << "\n";
   std::cout << "  v: " << this->localization.speed
+            << "  v_d: "<< path_prev.get_velocity_d(localization.d)
             << " s: " << this->localization.s
+            << " d: " << this->localization.d
             << " yaw: " << this->localization.yaw
             << "\n";
 
-  // if (STATES[this->state].size() == 1) {
-  //   state_next = STATES[this->state][0];
-  //   path_min = this->build_path(state_next);
-  // } else {
   std::map<std::tuple<std::string, std::string>, std::tuple<double, Path>> state_to_cost;
   double cost_avg = 0;
-  for (const std::string &transition_s : STATES[this->state_s]) {
+  for (const std::string &transition_s : STATES_S[this->state_s]) {
     for (const std::string &transition_d : STATES_D[this->state_d]) {
       Path path_s = build_path(transition_s);
       Path path_d = build_path(transition_d);
@@ -136,11 +134,11 @@ Path BehaviorPlanner::next() {
       cost_avg += cost;
     }
   }
-  cost_avg /= STATES[this->state_s].size() * STATES_D[this->state_d].size();
+  cost_avg /= STATES_S[this->state_s].size() * STATES_D[this->state_d].size();
 
   // Check if any transition is better that keeping the current state
   bool equal = true;
-  for (const std::string &transition_s : STATES[this->state_s]) {
+  for (const std::string &transition_s : STATES_S[this->state_s]) {
     for (const std::string &transition_d : STATES_D[this->state_d]) {
       double cost = std::get<0>(state_to_cost[{transition_s, transition_d}]);
       if (cost != cost_avg) {
@@ -162,7 +160,7 @@ Path BehaviorPlanner::next() {
     path_min = std::get<1>(state_to_cost[{state_s_next, state_d_next}]);
     std::cout << "keep\n";
   }
-  // }
+
   std::cout << "to: " << state_s_next << "/" << state_d_next << std::endl;
   this->state_s = state_s_next;
   this->state_d = state_d_next;

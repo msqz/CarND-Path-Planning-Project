@@ -5,8 +5,6 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
 #include "behavior.h"
 #include "json.hpp"
 #include "localization.h"
