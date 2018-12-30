@@ -8,7 +8,8 @@ const double MAX_ACC_WEIGHT = 2.0;
 const double EFFICIENCY_WEIGHT = 1.0;
 const double CRASH_WEIGHT = 20.0;
 const double OFFROAD_WEIGHT = 1.0;
-const double KEEP_RIGHT_WEIGHT = 1.0;
+const double KEEP_RIGHT_WEIGHT = 0.01;
+const double KEEP_LANE_CENTER = 0.1;
 
 class BehaviorPlanner {
  private:
@@ -90,12 +91,16 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   double cost_keep_right = KEEP_RIGHT_WEIGHT * evaluate_keep_right(path);
   std::cout << "    kr: " << cost_keep_right << "\n";
 
+  double cost_keep_lane_center = KEEP_LANE_CENTER * evaluate_keep_lane_center(path);
+  std::cout << "    klc: " << cost_keep_lane_center << "\n";
+
   double cost = cost_speed_limit +
                 cost_max_acc +
                 cost_efficiency +
                 cost_crash +
                 cost_offroad +
-                cost_keep_right;
+                cost_keep_right +
+                cost_keep_lane_center;
   std::cout << "    --: " << cost << "\n";
 
   return cost;

@@ -157,7 +157,7 @@ int main() {
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
-          json j;
+          // json j;
           // j["next_s"] = path.s;
           // j["next_d"] = path.d;
           // std::cout << "next_s: " << j["next_s"].dump() << "\n";

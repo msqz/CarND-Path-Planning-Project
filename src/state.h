@@ -13,6 +13,7 @@
 #include "json.hpp"
 #include "localization.h"
 #include "path.h"
+#include "obstacle.h"
 
 using json = nlohmann::json;
 
@@ -24,8 +25,9 @@ std::map<std::string, std::vector<std::string>> STATES_S = {
 };
 
 std::map<std::string, std::vector<std::string>> STATES_D = {
-    {"STRAIGHT", {"STRAIGHT", "RIGHT"}},
-    {"RIGHT", {"STRAIGHT", "RIGHT"}},
+    {"STRAIGHT", {"STRAIGHT", "RIGHT", "LEFT"}},
+    {"RIGHT", {"STRAIGHT", "RIGHT", "LEFT"}},
+    {"LEFT", {"STRAIGHT", "RIGHT", "LEFT"}},
 };
 
 std::vector<double> JMT(std::vector<double> start, std::vector<double> end, double t) {
@@ -132,13 +134,13 @@ class StopState : public State {
   }
 };
 
-template<int direction>
+template <int direction>
 class BaseSteeringState {
  public:
   /**
    * direction: -1 left, 0 straight, 1 right
    */
-  Path build_path(const Localization localization, Path path_prev) {
+  Path build_path(const Localization localization, Path path_prev, std::vector<Obstacle> obstacles) {
     int lane_current = -1;
     if (0 <= localization.d && localization.d <= LANE_WIDTH) {
       lane_current = 0;
@@ -148,9 +150,8 @@ class BaseSteeringState {
       lane_current = 2;
     }
 
-    // Move to the center of right lane
+    // Move to the center of the lane
     double d_target = ((lane_current + direction) * LANE_WIDTH) + (LANE_WIDTH / 2);
-    double distance_d = d_target - localization.d;
 
     std::vector<double> start_d{
         localization.d,
@@ -164,6 +165,7 @@ class BaseSteeringState {
         0,
     };
 
+    //TODO calculate multiple JMT for different dt
     std::vector<double> alphas_d = JMT(start_d, end_d, 2.0);
 
     Path path;
@@ -179,11 +181,11 @@ class BaseSteeringState {
       path.d.push_back(d);
     }
 
-    json j;
-    j["s"] = path.d;
-    j["d"] = path.d;
-    std::cout << "      jmt_s: " << j["s"].dump() << "\n";
-    std::cout << "      jmt_d: " << j["d"].dump() << "\n";
+    // json j;
+    // j["s"] = path.d;
+    // j["d"] = path.d;
+    // std::cout << "      jmt_s: " << j["s"].dump() << "\n";
+    // std::cout << "      jmt_d: " << j["d"].dump() << "\n";
 
     return path;
   }

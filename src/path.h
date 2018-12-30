@@ -22,7 +22,7 @@ struct Path {
   // only for cost calculations purpose
   double get_max_velocity() {
     double v_max = 0.0;
-    for (int i = 1; i < this->s.size(); i++) {
+    for (int i = 1; i < 50; i++) {
       double v = (this->s[i] - this->s[i - 1]) / DELTA_T;
       if (v > v_max) {
         v_max = v;
@@ -44,7 +44,7 @@ struct Path {
 
   double get_max_acc() {
     double a_max = 0.0;
-    for (int i = 2; i < this->size(); i++) {
+    for (int i = 2; i < 50; i++) {
       double v_0 = (this->s[i - 1] - this->s[i - 2]) / DELTA_T;
       double v_1 = (this->s[i] - this->s[i - 1]) / DELTA_T;
       double a = (v_1 - v_0) / DELTA_T;
@@ -64,13 +64,22 @@ struct Path {
   }
 
   bool contains_d(double d, double margin = 0) {
-    for (const double &d_path : this->d) {
-      if (d_path - margin <= d && d <= d_path + margin) {
+    for (int i = 0; i < this->d.size(); i++) {
+      if (this->d[i] - margin <= d && d <= this->d[i] + margin) {
         return true;
       }
     }
 
     return false;
+  }
+
+  bool contains(double s, double d, double margin_s = 0.0, double margin_d = 0.0) {
+    for (int i = 0; i < this->size(); i++) {
+      if (this->s[i] - margin_s <= s && s <= this->s[i] + margin_s &&
+          this->d[i] - margin_d <= d && d <= this->d[i] + margin_d) {
+        return true;
+      }
+    }
   }
 
   int size() {
