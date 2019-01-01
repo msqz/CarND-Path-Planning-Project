@@ -56,19 +56,21 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
   double t_stop = v_max / BRAKING_DECC;
-  // braking distance + buffer distance
-  double s_stop = path.s.front() +
+  double s_stop = path.s[1/DELTA_T] +
+                  // (v_max * t_stop) +
                   ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
                   FRONT_DISTANCE;
 
+  std::cout << "braking: " << s_stop << "\n";
   double cost_max = 0.0;
+  double distance_min = 0.0;
   for (const Obstacle &obstacle : obstacles) {
     // Check if path collide with any obstacle
     // Predict s and d of obstacle in dt
-    // TODO margin should come from estimatet obstacle velocity
+    // TODO margin should come from estimated obstacle velocity
     if (path.contains(obstacle.s, obstacle.d, 4.0, 1.0)) {
       double distance = obstacle.s - s_stop;
-      if (distance < 0) {
+      if (distance < distance_min) {
         // I want to handle scenario when all paths are going to hit
         // but the one with the largest distance can be selected.
         // For negative distance being closer means higher value here
@@ -83,6 +85,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
         // std::cout << "      s: " << j["s"].dump() << "\n";
         // std::cout << "      d: " << j["d"].dump() << "\n";
         cost_max = 1 + abs(distance);
+        distance_min = distance;
       }
     }
   }
@@ -100,8 +103,8 @@ double evaluate_offroad(Path path) {
 
 double evaluate_keep_right(Path path) {
   if (path.d.back() < 9.0) {
-    // return (10.0 - path.d.back()) / 10.0;
-    return 0;
+    return (10.0 - path.d.back()) / 10.0;
+    // return 0;
   }
   return 0;
 }

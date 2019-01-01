@@ -5,24 +5,53 @@
 #include "constraints.h"
 
 struct Path {
-  std::vector<double> s;
-  std::vector<double> d;
+  std::string label;
+  std::vector<double> s{};
+  std::vector<double> d{};
 
   double get_velocity(double s) {
     double v = 0.0;
     for (int i = 1; i < this->size(); i++) {
       if (this->s[i - 1] <= s && s <= this->s[i]) {
         v = (this->s[i] - this->s[i - 1]) / DELTA_T;
+        break;
       }
     }
 
     return v;
   }
 
+  double get_velocity_d(double d) {
+    double v = 0.0;
+    for (int i = 1; i < this->size(); i++) {
+      if (this->d[i - 1] <= d && d <= this->d[i] ||
+          this->d[i - 1] >= d && d >= this->d[i]) {
+        v = abs(this->d[i] - this->d[i - 1]) / DELTA_T;
+        break;
+      }
+    }
+
+    return v;
+  }
+
+  double get_acc_s(double s) {
+    double acc = 0.0;
+    for (int i = 2; i < this->size(); i++) {
+      if (this->s[i - 1] <= s && s <= this->s[i]) {
+        double v_0 = (this->s[i - 1] - this->s[i - 2]) / DELTA_T;
+        double v_1 = (this->s[i] - this->s[i - 1]) / DELTA_T;
+        acc = (v_1 - v_0) / DELTA_T;
+        break;
+      }
+    }
+
+    return acc;
+  }
+
   // only for cost calculations purpose
   double get_max_velocity() {
     double v_max = 0.0;
-    for (int i = 1; i < 50; i++) {
+    for (int i = 1; i < this->size(); i++) {
       double v = (this->s[i] - this->s[i - 1]) / DELTA_T;
       if (v > v_max) {
         v_max = v;
@@ -31,20 +60,9 @@ struct Path {
     return v_max;
   }
 
-  double get_velocity_d(double d) {
-    double v = 0.0;
-    for (int i = 1; i < this->size(); i++) {
-      if (this->d[i - 1] <= d && d <= this->d[i]) {
-        v = (this->d[i] - this->d[i - 1]) / DELTA_T;
-      }
-    }
-
-    return v;
-  }
-
   double get_max_acc() {
     double a_max = 0.0;
-    for (int i = 2; i < 50; i++) {
+    for (int i = 2; i < this->size(); i++) {
       double v_0 = (this->s[i - 1] - this->s[i - 2]) / DELTA_T;
       double v_1 = (this->s[i] - this->s[i - 1]) / DELTA_T;
       double a = (v_1 - v_0) / DELTA_T;
@@ -80,6 +98,8 @@ struct Path {
         return true;
       }
     }
+
+    return false;
   }
 
   int size() {

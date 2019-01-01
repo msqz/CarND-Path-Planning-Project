@@ -7,13 +7,13 @@
 void test_JMT_s() {
   std::vector<double> start{
       0.0,
-      10.0,
+      0.0,
       0.0,
   };
   std::vector<double> end{
       10.0,
       10.0,
-      0.0,
+      10.0,
   };
   std::vector<double> coeffs = JMT(start, end, 2.0);
 
@@ -37,16 +37,16 @@ void test_JMT_s() {
 
 void test_JMT_d() {
   std::vector<double> start{
-      0,
-      0.0,
+      -4.2,
+      0.8,
       0.0,
   };
   std::vector<double> end{
-      4.0,
+      -2.0,
       0.0,
       0.0,
   };
-  std::vector<double> coeffs = JMT(start, end, 3.0);
+  std::vector<double> coeffs = JMT(start, end, DELTA_T * PATH_LENGTH);
 
   Path path;
   for (int i = 0; i < PATH_LENGTH; i++) {

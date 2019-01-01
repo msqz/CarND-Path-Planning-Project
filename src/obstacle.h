@@ -11,6 +11,19 @@ struct Obstacle {
   double v_y;
   double s;
   double d;
+
+  //TODO unify with location
+  int get_lane() {
+    if (this->d < 4) {
+      return 0;
+    }
+
+    if (this->d < 8) {
+      return 1;
+    }
+
+    return 2;
+  }
 };
 
 #endif
