@@ -74,11 +74,11 @@ class State {
   std::vector<Path> build_paths(Localization loc, Path path_prev, std::vector<Obstacle> obst) {
     std::vector<std::vector<double>> parameters_cruise = this->get_cruise_parameters(loc, path_prev, obst);
     Path path_cruise = this->build_path(parameters_cruise[0], parameters_cruise[1], parameters_cruise[2], parameters_cruise[3]);
-    path_cruise.label = "ACC";
+    path_cruise.label = "CRUISE";
 
     std::vector<std::vector<double>> parameters_acc = this->get_acc_parameters(loc, path_prev, obst);
     Path path_acc = this->build_path(parameters_acc[0], parameters_acc[1], parameters_acc[2], parameters_acc[3]);
-    path_acc.label = "CRUISE";
+    path_acc.label = "ACC";
 
     std::vector<std::vector<double>> parameters_decc = this->get_decc_parameters(loc, path_prev, obst);
     Path path_decc = this->build_path(parameters_decc[0], parameters_decc[1], parameters_decc[2], parameters_decc[3]);
@@ -106,13 +106,15 @@ class KL : public State {
   };
 
   std::vector<std::vector<double>> get_acc_parameters(Localization loc, Path path_prev, std::vector<Obstacle> obst) {
-    double v = loc.speed * MPH_TO_MS;
-    double a = path_prev.get_acc_s(loc.s);
-    std::vector<double> s_i{loc.s, v, a};
+    double t = DELTA_T * PATH_LENGTH;
+    double v_0 = loc.speed * MPH_TO_MS;
+    double a_0 = path_prev.get_acc_s(loc.s);
+    double a_1 = MAX_ACC;
+    double v_1 = v_0 + a_1 * t;
 
-    a = MAX_ACC;
-    v = v + (0.4 * a);
-    std::vector<double> s_f{loc.s + (PATH_LENGTH * DELTA_T * v), v, a};
+    std::vector<double> s_i{loc.s, v_0, a_0};
+    double s_1 = loc.s + (v_0 * t + a_1 * (t * t) / 2);
+    std::vector<double> s_f{s_1, v_1, a_1};
 
     std::vector<double> d_i{loc.d, 0, 0};
     std::vector<double> d_f{loc.d, 0, 0};
@@ -157,13 +159,15 @@ class LCL : public State {
   };
 
   std::vector<std::vector<double>> get_acc_parameters(Localization loc, Path path_prev, std::vector<Obstacle> obst) {
-    double v = loc.speed * MPH_TO_MS;
-    double a = path_prev.get_acc_s(loc.s);
-    std::vector<double> s_i{loc.s, v, a};
+    double t = DELTA_T * PATH_LENGTH;
+    double v_0 = loc.speed * MPH_TO_MS;
+    double a_0 = path_prev.get_acc_s(loc.s);
+    double a_1 = MAX_ACC;
+    double v_1 = v_0 + a_1 * t;
 
-    a = MAX_ACC;
-    v = v + (0.4 * a);
-    std::vector<double> s_f{loc.s + (PATH_LENGTH * DELTA_T * v), v, a};
+    std::vector<double> s_i{loc.s, v_0, a_0};
+    double s_1 = loc.s + (v_0 * t + a_1 * (t * t) / 2);
+    std::vector<double> s_f{s_1, v_1, a_1};
 
     std::vector<double> d_i{loc.d, 0, 0};
     // TODO calculate final d

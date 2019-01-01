@@ -56,12 +56,11 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
   double t_stop = v_max / BRAKING_DECC;
-  double s_stop = path.s[1/DELTA_T] +
-                  // (v_max * t_stop) +
+  double s_stop = path.s.back() +
+                  (v_max * t_stop) -
                   ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
                   FRONT_DISTANCE;
 
-  std::cout << "braking: " << s_stop << "\n";
   double cost_max = 0.0;
   double distance_min = 0.0;
   for (const Obstacle &obstacle : obstacles) {
