@@ -12,8 +12,8 @@
 #include "constraints.h"
 #include "json.hpp"
 #include "localization.h"
-#include "path.h"
 #include "obstacle.h"
+#include "path.h"
 
 using json = nlohmann::json;
 
@@ -48,30 +48,44 @@ std::vector<double> JMT(std::vector<double> start, std::vector<double> end, doub
   Eigen::MatrixXd a_345 = A.inverse() * B;
   std::vector<double> alphas{a_0, a_1, a_2, a_345(0), a_345(1), a_345(2)};
 
-  return alphas;
+  std::vector<double> points;
+  for (int i = 0; i < PATH_LENGTH; i++) {
+    double dt = i * DELTA_T;
+    double p = alphas[0] +
+               alphas[1] * dt +
+               alphas[2] * pow(dt, 2) +
+               alphas[3] * pow(dt, 3) +
+               alphas[4] * pow(dt, 4) +
+               alphas[5] * pow(dt, 5);
+
+    points.push_back(p);
+  }
+
+  return points;
 }
 
 class State {
  public:
-  virtual Path build_path(const Localization localization){};
+  virtual Path build_path(const Localization localization, Path path_prev) = 0;
 };
 
 class AccState : public State {
  public:
-  Path build_path(const Localization localization) {
+  Path build_path(const Localization localization, Path path_prev) {
     Path path;
 
-    double v_init = localization.speed * MPH_TO_MS;
-    double s_init = localization.s;
+    double t = DELTA_T * PATH_LENGTH;
 
-    for (int i = 0; i < PATH_LENGTH; i++) {
-      double t = (i + 1) * DELTA_T;
-      double v = v_init + (0.4 * MAX_ACC * t);
-      double s = (v_init + v) * t / 2;
+    double s_i = localization.s;
+    double s_dot_i = localization.speed * MPH_TO_MS;
+    double s_ddot_i = path_prev.get_acc_s(s_i);
 
-      path.s.push_back(s_init + s);
-      path.d.push_back(localization.d);
-    }
+    double a = 0.5 * MAX_ACC;
+    double s_f = s_i + (s_dot_i * t) + (a * pow(t, 2) / 2);
+    double s_dot_f = s_dot_i + (a * t);
+    double s_ddot_f = 0;  // To be checked
+
+    path.s = JMT({s_i, s_dot_i, s_ddot_i}, {s_f, s_dot_f, s_ddot_f}, t);
 
     return path;
   }
@@ -79,7 +93,7 @@ class AccState : public State {
 
 class CruiseState : public State {
  public:
-  Path build_path(const Localization localization) {
+  Path build_path(const Localization localization, Path path_prev) {
     Path path;
     double s_init = localization.s;
     double v = localization.speed * MPH_TO_MS;
@@ -93,15 +107,10 @@ class CruiseState : public State {
   }
 };
 
-// Brake is for emergency decceleration when other car cuts off
-// Need to have jerk calculation for that
-class BrakeState : public State {
-};
-
 // Decc is for maintaining the speed when approaching obstacle
 class DeccState : public State {
  public:
-  Path build_path(const Localization localization) {
+  Path build_path(const Localization localization, Path path_prev) {
     Path path;
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
@@ -124,7 +133,7 @@ class DeccState : public State {
 
 class StopState : public State {
  public:
-  Path build_path(const Localization localization) {
+  Path build_path(const Localization localization, Path path_prev) {
     Path path;
     for (int i = 0; i < PATH_LENGTH; i++) {
       path.s.push_back(localization.s);
@@ -140,7 +149,7 @@ class BaseSteeringState {
   /**
    * direction: -1 left, 0 straight, 1 right
    */
-  Path build_path(const Localization localization, Path path_prev, std::vector<Obstacle> obstacles) {
+  Path build_path(const Localization localization, Path path_prev) {
     int lane_current = -1;
     if (0 <= localization.d && localization.d <= LANE_WIDTH) {
       lane_current = 0;
@@ -156,7 +165,7 @@ class BaseSteeringState {
     std::vector<double> start_d{
         localization.d,
         path_prev.get_velocity_d(localization.d),
-        0,
+        path_prev.get_acc_d(localization.d),
     };
 
     std::vector<double> end_d{
@@ -165,21 +174,9 @@ class BaseSteeringState {
         0,
     };
 
-    //TODO calculate multiple JMT for different dt
-    std::vector<double> alphas_d = JMT(start_d, end_d, 2.0);
-
+    double t = PATH_LENGTH * DELTA_T;
     Path path;
-    for (int i = 0; i < PATH_LENGTH; i++) {
-      double t = i * DELTA_T;
-      double d = alphas_d[0] +
-                 alphas_d[1] * t +
-                 alphas_d[2] * pow(t, 2) +
-                 alphas_d[3] * pow(t, 3) +
-                 alphas_d[4] * pow(t, 4) +
-                 alphas_d[5] * pow(t, 5);
-
-      path.d.push_back(d);
-    }
+    path.d = JMT(start_d, end_d, t);
 
     // json j;
     // j["s"] = path.d;

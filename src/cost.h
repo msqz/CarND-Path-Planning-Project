@@ -57,7 +57,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
   double v_max = path.get_max_velocity();
   double t_stop = v_max / BRAKING_DECC;
   // braking distance + buffer distance
-  double s_stop = path.s.front() +
+  double s_stop = localization.s +
                   ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
                   FRONT_DISTANCE;
 
@@ -66,7 +66,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
     // Check if path collide with any obstacle
     // Predict s and d of obstacle in dt
     // TODO margin should come from estimatet obstacle velocity
-    if (path.contains(obstacle.s, obstacle.d, 4.0, 1.0)) {
+    if (path.contains(obstacle.s, obstacle.d, 4.0, 2.0)) {
       double distance = obstacle.s - s_stop;
       if (distance < 0) {
         // I want to handle scenario when all paths are going to hit

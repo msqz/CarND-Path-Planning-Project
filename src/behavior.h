@@ -9,7 +9,7 @@ const double EFFICIENCY_WEIGHT = 1.0;
 const double CRASH_WEIGHT = 20.0;
 const double OFFROAD_WEIGHT = 1.0;
 const double KEEP_RIGHT_WEIGHT = 0.01;
-const double KEEP_LANE_CENTER = 0.1;
+const double KEEP_LANE_CENTER = 10.0;
 
 class BehaviorPlanner {
  private:
@@ -42,19 +42,19 @@ Path BehaviorPlanner::build_path(const std::string &state) {
 
   if (state == "ACC") {
     AccState state = AccState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "CRUISE") {
     CruiseState state = CruiseState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "DECC") {
     DeccState state = DeccState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "STOP") {
     StopState state = StopState();
-    return state.build_path(this->localization);
+    return state.build_path(this->localization, this->path_prev);
   }
   if (state == "STRAIGHT") {
     StraightState state = StraightState();
@@ -114,11 +114,19 @@ Path BehaviorPlanner::next() {
 
   // This is the crucial part to overcome the latency
   this->localization.speed = this->path_prev.get_velocity(this->localization.s) * MS_TO_MPH;
+  for (int i = 1; i < this->path_prev.size(); i++) {
+    if (this->path_prev.s[i - 1] <= this->localization.s && this->localization.s <= this->path_prev.s[i]) {
+      this->localization.d = this->path_prev.d[i];
+      break;
+    }
+  }
 
   std::cout << "\n";
   std::cout << "from: " << this->state_s << "/" << this->state_d << "\n";
-  std::cout << "  v: " << this->localization.speed
-            << "  v_d: "<< path_prev.get_velocity_d(localization.d)
+  std::cout << "  v_s: " << this->localization.speed
+            << " a_s: " << path_prev.get_acc_s(localization.s)
+            << " v_d: " << path_prev.get_velocity_d(localization.d)
+            << " a_d: " << path_prev.get_acc_d(localization.d)
             << " s: " << this->localization.s
             << " d: " << this->localization.d
             << " yaw: " << this->localization.yaw
