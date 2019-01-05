@@ -97,8 +97,9 @@ struct Path {
   }
 
   bool contains_d(double d, double margin = 0) {
-    for (int i = 0; i < this->d.size(); i++) {
-      if (this->d[i] - margin <= d && d <= this->d[i] + margin) {
+    for (int i = 1; i < this->d.size(); i++) {
+      if (this->d[i-1] - margin <= d && d <= this->d[i] + margin ||
+          this->d[i-1] + margin >= d && d >= this->d[i] - margin) {
         return true;
       }
     }
@@ -107,12 +108,37 @@ struct Path {
   }
 
   bool contains(double s, double d, double margin_s = 0.0, double margin_d = 0.0) {
-    for (int i = 0; i < this->size(); i++) {
-      if (this->s[i] - margin_s <= s && s <= this->s[i] + margin_s &&
-          this->d[i] - margin_d <= d && d <= this->d[i] + margin_d) {
-        return true;
+    // TODO should I use theta_d here?
+
+    // Using splitted continue/contine/return I avoid redundant calculations of diff_d
+    for (int i = 1; i < this->size(); i++) {
+      double offset_s = CAR_LENGTH / 2 + margin_s / 2;
+      double s_max = std::max(s, this->s[i]);
+      double s_min = std::min(s, this->s[i]);
+
+      double diff_s = (s_max - offset_s) - (s_min + offset_s);
+      if (diff_s > 0) {
+        continue;
       }
+
+      double offset_d = CAR_WIDTH / 2 + margin_d / 2;
+      double d_max = std::max(d, this->d[i]);
+      double d_min = std::min(d, this->d[i]);
+      double diff_d = (d_max - offset_d) - (d_min + offset_d);
+      if (diff_d > 0) {
+        continue;
+      }
+
+      return true;
+
+      // if (this->s[i-1] - margin_s <= s && s <= this->s[i] + margin_s &&
+      //     (this->d[i-1] - margin_d <= d && d <= this->d[i] + margin_d ||
+      //      this->d[i-1] + margin_d >= d && d >= this->d[i] - margin_d)) {
+      //   return true;
+      // }
     }
+
+    return false;
   }
 
   int size() {

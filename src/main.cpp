@@ -107,6 +107,7 @@ int main() {
           double end_path_d = j[1]["end_path_d"];
           // Sensor Fusion Data, a list of all other cars on the same side of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
+          std::cout << "sensor_fusion: " << sensor_fusion.dump() << "\n";
           json msgJson;
 
           Localization localization = {
@@ -162,8 +163,6 @@ int main() {
           j["next_d"] = path.d;
           std::cout << "next_s: " << j["next_s"].dump() << "\n";
           std::cout << "next_d: " << j["next_d"].dump() << "\n";
-          // std::cout << "next_x: " << msgJson["next_x"].dump() << "\n";
-          // std::cout << "next_y: " << msgJson["next_y"].dump() << "\n";
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 

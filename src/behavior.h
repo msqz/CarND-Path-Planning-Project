@@ -2,14 +2,15 @@
 #include "obstacle.h"
 #include "path.h"
 #include "state.h"
+#include "tracking.h"
+#include "json.hpp"
 
 const double SPEED_LIMIT_WEIGHT = 10.0;
 const double MAX_ACC_WEIGHT = 2.0;
-const double EFFICIENCY_WEIGHT = 1.0;
+const double EFFICIENCY_WEIGHT = 2.0;
 const double CRASH_WEIGHT = 20.0;
-const double OFFROAD_WEIGHT = 1.0;
-const double KEEP_RIGHT_WEIGHT = 0.01;
-const double KEEP_LANE_CENTER = 10.0;
+const double OFFROAD_WEIGHT = 10000.0;
+const double KEEP_RIGHT_WEIGHT = 0.0;
 
 class BehaviorPlanner {
  private:
@@ -18,6 +19,7 @@ class BehaviorPlanner {
   std::vector<Obstacle> obstacles;
   Localization localization;
   Path path_prev;
+  Tracking tracking;
 
   Path build_path(const std::string &state);
   double evaluate_path(const Path &path);
@@ -31,6 +33,9 @@ class BehaviorPlanner {
 
 void BehaviorPlanner::set_obstacles(const std::vector<Obstacle> &obstacles) {
   this->obstacles = obstacles;
+  for (const Obstacle &o : obstacles) {
+    tracking.add(o);
+  }
 }
 
 void BehaviorPlanner::set_localization(const Localization &localization) {
@@ -68,6 +73,14 @@ Path BehaviorPlanner::build_path(const std::string &state) {
     RightState state = RightState();
     return state.build_path(this->localization, this->path_prev);
   }
+  if (state == "DOUBLE_LEFT") {
+    DoubleLeftState state = DoubleLeftState();
+    return state.build_path(this->localization, this->path_prev);
+  }
+  if (state == "DOUBLE_RIGHT") {
+    DoubleRightState state = DoubleRightState();
+    return state.build_path(this->localization, this->path_prev);
+  }
 
   return path;
 }
@@ -82,7 +95,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   double cost_efficiency = EFFICIENCY_WEIGHT * evaluate_efficiency(path);
   std::cout << "    ef: " << cost_efficiency << "\n";
 
-  double cost_crash = CRASH_WEIGHT * evaluate_crash(path, this->localization, this->obstacles);
+  double cost_crash = CRASH_WEIGHT * evaluate_crash(path, this->localization, this->tracking.predict());
   std::cout << "    cr: " << cost_crash << "\n";
 
   double cost_offroad = OFFROAD_WEIGHT * evaluate_offroad(path);
@@ -91,16 +104,12 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   double cost_keep_right = KEEP_RIGHT_WEIGHT * evaluate_keep_right(path);
   std::cout << "    kr: " << cost_keep_right << "\n";
 
-  double cost_keep_lane_center = KEEP_LANE_CENTER * evaluate_keep_lane_center(path);
-  std::cout << "    klc: " << cost_keep_lane_center << "\n";
-
   double cost = cost_speed_limit +
                 cost_max_acc +
                 cost_efficiency +
                 cost_crash +
                 cost_offroad +
-                cost_keep_right +
-                cost_keep_lane_center;
+                cost_keep_right;
   std::cout << "    --: " << cost << "\n";
 
   return cost;
@@ -131,6 +140,12 @@ Path BehaviorPlanner::next() {
             << " d: " << this->localization.d
             << " yaw: " << this->localization.yaw
             << "\n";
+  for (Prediction &p : this->tracking.predict()) {
+    std::cout << "  id: " << p.id
+              << " s: " << p.s
+              << " d: " << p.d
+              << "\n";
+  }
 
   std::map<std::tuple<std::string, std::string>, std::tuple<double, Path>> state_to_cost;
   double cost_avg = 0;
@@ -141,7 +156,9 @@ Path BehaviorPlanner::next() {
       Path path;
       path.s = path_s.s;
       path.d = path_d.d;
-      std::cout << "  transition: " << transition_s << "/" << transition_d << ":\n ";
+
+      std::cout << "  transition: " << transition_s << "/" 
+                << transition_d << ":\n ";
       double cost = this->evaluate_path(path);
       state_to_cost[{transition_s, transition_d}] = {cost, path};
       cost_avg += cost;

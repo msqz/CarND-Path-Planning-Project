@@ -25,9 +25,11 @@ std::map<std::string, std::vector<std::string>> STATES_S = {
 };
 
 std::map<std::string, std::vector<std::string>> STATES_D = {
-    {"STRAIGHT", {"STRAIGHT", "RIGHT", "LEFT"}},
-    {"RIGHT", {"STRAIGHT", "RIGHT", "LEFT"}},
-    {"LEFT", {"STRAIGHT", "RIGHT", "LEFT"}},
+    {"STRAIGHT", {"STRAIGHT", "RIGHT", "LEFT", "DOUBLE_LEFT", "DOUBLE_RIGHT"}},
+    {"RIGHT", {"STRAIGHT", "RIGHT", "DOUBLE_RIGHT"}},
+    {"LEFT", {"STRAIGHT", "LEFT", "DOUBLE_LEFT"}},
+    {"DOUBLE_RIGHT", {"STRAIGHT", "RIGHT", "DOUBLE_RIGHT"}},
+    {"DOUBLE_LEFT", {"STRAIGHT", "LEFT", "DOUBLE_LEFT"}},
 };
 
 std::vector<double> JMT(std::vector<double> start, std::vector<double> end, double t) {
@@ -80,10 +82,10 @@ class AccState : public State {
     double s_dot_i = localization.speed * MPH_TO_MS;
     double s_ddot_i = path_prev.get_acc_s(s_i);
 
-    double a = 0.5 * MAX_ACC;
+    double a = 0.4 * MAX_ACC;
     double s_f = s_i + (s_dot_i * t) + (a * pow(t, 2) / 2);
     double s_dot_f = s_dot_i + (a * t);
-    double s_ddot_f = 0;  // To be checked
+    double s_ddot_f = 0;
 
     path.s = JMT({s_i, s_dot_i, s_ddot_i}, {s_f, s_dot_f, s_ddot_f}, t);
 
@@ -107,7 +109,6 @@ class CruiseState : public State {
   }
 };
 
-// Decc is for maintaining the speed when approaching obstacle
 class DeccState : public State {
  public:
   Path build_path(const Localization localization, Path path_prev) {
@@ -178,12 +179,6 @@ class BaseSteeringState {
     Path path;
     path.d = JMT(start_d, end_d, t);
 
-    // json j;
-    // j["s"] = path.d;
-    // j["d"] = path.d;
-    // std::cout << "      jmt_s: " << j["s"].dump() << "\n";
-    // std::cout << "      jmt_d: " << j["d"].dump() << "\n";
-
     return path;
   }
 };
@@ -195,6 +190,12 @@ class LeftState : public BaseSteeringState<-1> {
 };
 
 class RightState : public BaseSteeringState<1> {
+};
+
+class DoubleLeftState : public BaseSteeringState<-2> {
+};
+
+class DoubleRightState : public BaseSteeringState<2> {
 };
 
 #endif

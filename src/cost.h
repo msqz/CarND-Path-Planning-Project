@@ -8,6 +8,7 @@
 #include "localization.h"
 #include "obstacle.h"
 #include "path.h"
+#include "tracking.h"
 
 double sigmoid(double x) {
   return 1 / (1 + exp(-x));
@@ -52,7 +53,7 @@ double evaluate_efficiency(Path trajectory) {
   return 1 / velocity_avg;
 }
 
-double evaluate_crash(Path path, Localization localization, std::vector<Obstacle> obstacles) {
+double evaluate_crash(Path path, Localization localization, std::vector<Prediction> predictions) {
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
   double t_stop = v_max / BRAKING_DECC;
@@ -62,26 +63,30 @@ double evaluate_crash(Path path, Localization localization, std::vector<Obstacle
                   FRONT_DISTANCE;
 
   double cost_max = 0.0;
-  for (const Obstacle &obstacle : obstacles) {
+  double dt = PATH_LENGTH * DELTA_T;
+  for (const Prediction &prediction : predictions) {
+    // Check if there's a car around
+    // TODO it might be redundant
+    // std::tuple<double, double> corner_lt = {localization.s + CAR_LENGTH,
+    //                                         localization.d - CAR_WIDTH};
+    // std::tuple<double, double> corner_rt = {localization.s + CAR_LENGTH,
+    //                                         localization.d - CAR_WIDTH};
+    // std::tuple<double, double> corner_rb = {localization.s + CAR_LENGTH,
+    //                                         localization.d + CAR_WIDTH};
+    // std::tuple<double, double> corner_lb = {localization.s - CAR_LENGTH,
+    //                                         localization.d - CAR_WIDTH};
     // Check if path collide with any obstacle
-    // Predict s and d of obstacle in dt
-    // TODO margin should come from estimatet obstacle velocity
-    if (path.contains(obstacle.s, obstacle.d, 4.0, 2.0)) {
-      double distance = obstacle.s - s_stop;
+    if (path.contains(prediction.s, prediction.d, 1.0, 0.5)) {
+      double distance = prediction.s - s_stop;
       if (distance < 0) {
         // I want to handle scenario when all paths are going to hit
         // but the one with the largest distance can be selected.
-        // For negative distance being closer means higher value here
-        // (so at least it will hit withe the minimal impact)
-        std::cout << "    id: " << obstacle.id
-                  << ", s: " << obstacle.s
-                  << ", d: " << obstacle.d
+        // For negative distance being closer means higher cost
+        // (so at least it will hit with the minimal impact)
+        std::cout << "    id: " << prediction.id
+                  << ", s: " << prediction.s
+                  << ", d: " << prediction.d
                   << ", dist: " << distance << "\n";
-        // nlohmann::json j;
-        // j["s"] = path.s;
-        // j["d"] = path.d;
-        // std::cout << "      s: " << j["s"].dump() << "\n";
-        // std::cout << "      d: " << j["d"].dump() << "\n";
         cost_max = 1 + abs(distance);
       }
     }
@@ -100,25 +105,8 @@ double evaluate_offroad(Path path) {
 
 double evaluate_keep_right(Path path) {
   if (path.d.back() < 9.0) {
-    // return (10.0 - path.d.back()) / 10.0;
-    return 0;
+    return (10.0 - path.d.back()) / 10.0;
   }
-  return 0;
-}
-
-//TODO get rid of hardcoded nums (4.0 is the lane width)
-double evaluate_keep_lane_center(Path path) {
-  double dist = 0;
-  double d = path.d.back();
-  if (0.0 <= d && d < 4.0) {
-    dist = 2.0 - d;
-  } else if (4.0 <= d && d < 8.0) {
-    dist = 6.0 - d;
-  } else if (8.0 <= d && d < 12.0) {
-    dist = 10.0 - d;
-  }
-
-  // return sigmoid(dist);
   return 0;
 }
 
