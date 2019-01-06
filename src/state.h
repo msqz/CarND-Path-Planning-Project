@@ -150,15 +150,8 @@ class BaseSteeringState {
   /**
    * direction: -1 left, 0 straight, 1 right
    */
-  Path build_path(const Localization localization, Path path_prev) {
-    int lane_current = -1;
-    if (0 <= localization.d && localization.d <= LANE_WIDTH) {
-      lane_current = 0;
-    } else if (LANE_WIDTH <= localization.d && localization.d < 2.0 * LANE_WIDTH) {
-      lane_current = 1;
-    } else if (2.0 * LANE_WIDTH <= localization.d && localization.d < 3.0 * LANE_WIDTH) {
-      lane_current = 2;
-    }
+  Path build_path(Localization localization, Path path_prev) {
+    int lane_current = localization.get_lane();
 
     // Move to the center of the lane
     double d_target = ((lane_current + direction) * LANE_WIDTH) + (LANE_WIDTH / 2);

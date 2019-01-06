@@ -107,7 +107,13 @@ int main() {
           double end_path_d = j[1]["end_path_d"];
           // Sensor Fusion Data, a list of all other cars on the same side of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
-          std::cout << "sensor_fusion: " << sensor_fusion.dump() << "\n";
+          // std::cout << "sensor_fusion: " << sensor_fusion.dump() << "\n";
+          std::cout << "{";
+          std::cout << "\"timestamp\": "
+                    << std::chrono::duration_cast<std::chrono::milliseconds>(
+                      start.time_since_epoch()
+                    ).count();
+
           json msgJson;
 
           Localization localization = {
@@ -161,16 +167,18 @@ int main() {
           json j;
           j["next_s"] = path.s;
           j["next_d"] = path.d;
-          std::cout << "next_s: " << j["next_s"].dump() << "\n";
-          std::cout << "next_d: " << j["next_d"].dump() << "\n";
+          std::cout << ", \"next_s\": " << j["next_s"].dump();
+          std::cout << ", \"next_d\": " << j["next_d"].dump();
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
           auto end = std::chrono::system_clock::now();
           std::chrono::duration<double> elapsed = end - start;
-          std::cout << "took: " << elapsed.count() * 1000 << "ms\n";
+          std::cout << ", \"took\": " << elapsed.count() * 1000;
           int sleep_time = 100 - (elapsed.count() * 1000);
-          std::cout << "sleep for: " << sleep_time << "\n";
+          std::cout << ", \"sleep\": " << sleep_time;
+
+          std::cout << "}" << "\n";
 
           this_thread::sleep_for(chrono::milliseconds(sleep_time));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -198,7 +206,7 @@ int main() {
   });
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!!!" << std::endl;
+    //std::cout << "Connected!!!" << std::endl;
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
@@ -209,7 +217,7 @@ int main() {
 
   int port = 4567;
   if (h.listen(port)) {
-    std::cout << "Listening to port " << port << std::endl;
+    //std::cout << "Listening to port " << port << std::endl;
   } else {
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;

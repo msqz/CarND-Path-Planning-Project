@@ -110,7 +110,8 @@ struct Path {
   bool contains(double s, double d, double margin_s = 0.0, double margin_d = 0.0) {
     // TODO should I use theta_d here?
 
-    // Using splitted continue/contine/return I avoid redundant calculations of diff_d
+    // By using splitted continue/continue/return I can avoid 
+    // redundant calculations of diff_d
     for (int i = 1; i < this->size(); i++) {
       double offset_s = CAR_LENGTH / 2 + margin_s / 2;
       double s_max = std::max(s, this->s[i]);
@@ -130,12 +131,6 @@ struct Path {
       }
 
       return true;
-
-      // if (this->s[i-1] - margin_s <= s && s <= this->s[i] + margin_s &&
-      //     (this->d[i-1] - margin_d <= d && d <= this->d[i] + margin_d ||
-      //      this->d[i-1] + margin_d >= d && d >= this->d[i] - margin_d)) {
-      //   return true;
-      // }
     }
 
     return false;

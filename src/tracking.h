@@ -10,10 +10,14 @@
 // keep last 3 measurements for each visible obstacle
 // keep them all (for now), i.e. no removing of obstacle from the map
 
+int RELIABLE_LENGTH = 20;
+
 struct Prediction {
   int id;
   double s;
   double d;
+  double s_original;
+  double d_original;
 };
 
 struct TrackingRecord {
@@ -30,7 +34,7 @@ struct Tracking {
 
     if (history.find(obstacle.id) == history.end()) {
       history[obstacle.id] = {};
-    } else if (history[obstacle.id].size() == 2) {
+    } else if (history[obstacle.id].size() == RELIABLE_LENGTH) {
       history[obstacle.id].erase(history[obstacle.id].begin());
     }
 
@@ -47,24 +51,44 @@ struct Tracking {
       Prediction prediction{
           .id = pair.first,
       };
-      prediction.s = tracking.back().obstacle.s;
-      prediction.d = tracking.back().obstacle.d;
-      predictions.push_back(prediction);
-      continue;
+      // prediction.s = tracking.back().obstacle.s;
+      // prediction.d = tracking.back().obstacle.d;
+      // prediction.s_original = prediction.s;
+      // prediction.d_original = prediction.d;
+      // predictions.push_back(prediction);
+      // continue;
 
-      if (tracking.size() == 1) {
+      if (tracking.size() < RELIABLE_LENGTH) {
         // Not enough data to predict anything
         prediction.s = tracking[0].obstacle.s;
         prediction.d = tracking[0].obstacle.d;
+        prediction.s_original = prediction.s;
+        prediction.d_original = prediction.d;
         predictions.push_back(prediction);
-      } else if (tracking.size() == 2) {
+        // std::cout << "  id: " << tracking[0].obstacle.id
+        //           << " s: " << tracking[0].obstacle.s
+        //           << " d: " << tracking[0].obstacle.d
+        //           << " dt: 0"
+        //           << "\n";
+      } else {
         // Can predict position based on velocity
-        double dt = (tracking[1].timestamp - tracking[0].timestamp) / 1000.0;
-        double v_s = (tracking[1].obstacle.s - tracking[0].obstacle.s) / dt;
-        double v_d = (tracking[1].obstacle.d - tracking[0].obstacle.d) / dt;
-        prediction.s = tracking[1].obstacle.s + (v_s * t);
-        prediction.d = tracking[1].obstacle.d + (v_d * t);
+        double dt = (tracking.back().timestamp - tracking.front().timestamp) / 1000;
+        double v_s = (tracking.back().obstacle.s - tracking.front().obstacle.s) / dt;        
+        double v_d = (tracking.back().obstacle.d - tracking.front().obstacle.d) / dt;        
+
+        prediction.s = tracking.back().obstacle.s + (v_s * t);
+        prediction.d = tracking.back().obstacle.d + (v_d * t);
+        prediction.s_original = tracking.back().obstacle.s;
+        prediction.d_original = tracking.back().obstacle.d;
         predictions.push_back(prediction);
+
+        // std::cout << "  id: " << tracking[0].obstacle.id
+        //           << " s: " << prediction.s
+        //           << " d: " << prediction.d
+        //           << " v_s: " << v_s
+        //           << " v_d: " << v_d
+        //           << " dt: " << dt
+        //           << "\n";
       // } else {
       //   // Can predict position pased on velocity and acceleration
       //   double dt_0 = (tracking[1].timestamp - tracking[0].timestamp) / 1000.0;
@@ -81,6 +105,7 @@ struct Tracking {
       //   predictions.push_back(prediction);
       }
     }
+
     return predictions;
   }
 };

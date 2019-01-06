@@ -86,31 +86,38 @@ Path BehaviorPlanner::build_path(const std::string &state) {
 }
 
 double BehaviorPlanner::evaluate_path(const Path &path) {
+  std::cout << ", \"evaluation\": ";
+  std::cout << "{";
+
   double cost_speed_limit = SPEED_LIMIT_WEIGHT * evaluate_speed_limit(path);
-  std::cout << "    sl: " << cost_speed_limit << "\n";
-
   double cost_max_acc = MAX_ACC_WEIGHT * evaluate_max_acc(path, this->localization);
-  std::cout << "    ma: " << cost_max_acc << "\n";
-
   double cost_efficiency = EFFICIENCY_WEIGHT * evaluate_efficiency(path);
-  std::cout << "    ef: " << cost_efficiency << "\n";
 
+  std::cout << "\"crash\": ";
+  std::cout << "[";
   double cost_crash = CRASH_WEIGHT * evaluate_crash(path, this->localization, this->tracking.predict());
-  std::cout << "    cr: " << cost_crash << "\n";
+  std::cout << "]";
 
   double cost_offroad = OFFROAD_WEIGHT * evaluate_offroad(path);
-  std::cout << "    of: " << cost_offroad << "\n";
-
   double cost_keep_right = KEEP_RIGHT_WEIGHT * evaluate_keep_right(path);
-  std::cout << "    kr: " << cost_keep_right << "\n";
-
   double cost = cost_speed_limit +
                 cost_max_acc +
                 cost_efficiency +
                 cost_crash +
                 cost_offroad +
                 cost_keep_right;
-  std::cout << "    --: " << cost << "\n";
+
+  std::cout << ", \"cost\": ";
+  std::cout << "{";
+  std::cout << "\"sl\": " << cost_speed_limit;
+  std::cout << ", \"ma\": " << cost_max_acc;
+  std::cout << ", \"ef\": " << cost_efficiency;
+  std::cout << ", \"cr\": " << cost_crash;
+  std::cout << ", \"of\": " << cost_offroad ;
+  std::cout << ", \"kr\": " << cost_keep_right;
+  std::cout << ", \"total\": " << cost;
+  std::cout << "}";
+  std::cout << "}";
 
   return cost;
 }
@@ -118,37 +125,49 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
 Path BehaviorPlanner::next() {
   std::string state_s_next;
   std::string state_d_next;
-  double cost_min = std::numeric_limits<double>::infinity();
+  double cost_min = std::numeric_limits<double>::max();
   Path path_min;
 
   // This is the crucial part to overcome the latency
   this->localization.speed = this->path_prev.get_velocity(this->localization.s) * MS_TO_MPH;
   for (int i = 1; i < this->path_prev.size(); i++) {
-    if (this->path_prev.s[i - 1] <= this->localization.s && this->localization.s <= this->path_prev.s[i]) {
+    if (this->path_prev.s[i - 1] <= this->localization.s && 
+      this->localization.s <= this->path_prev.s[i]) {
       this->localization.d = this->path_prev.d[i];
       break;
     }
   }
 
-  std::cout << "\n";
-  std::cout << "from: " << this->state_s << "/" << this->state_d << "\n";
-  std::cout << "  v_s: " << this->localization.speed
-            << " a_s: " << path_prev.get_acc_s(localization.s)
-            << " v_d: " << path_prev.get_velocity_d(localization.d)
-            << " a_d: " << path_prev.get_acc_d(localization.d)
-            << " s: " << this->localization.s
-            << " d: " << this->localization.d
-            << " yaw: " << this->localization.yaw
-            << "\n";
-  for (Prediction &p : this->tracking.predict()) {
-    std::cout << "  id: " << p.id
-              << " s: " << p.s
-              << " d: " << p.d
-              << "\n";
+  
+  std::cout << ", \"from\": \"" << this->state_s << "/" << this->state_d << "\"";
+  std::cout << ", \"v_s\": " << this->localization.speed;
+  std::cout << ", \"a_s\": " << path_prev.get_acc_s(localization.s);
+  std::cout << ", \"v_d\": " << path_prev.get_velocity_d(localization.d);
+  std::cout << ", \"a_d\": " << path_prev.get_acc_d(localization.d);
+  std::cout << ", \"s\": " << this->localization.s;
+  std::cout << ", \"d\": " << this->localization.d;
+  std::cout << ", \"yaw\": " << this->localization.yaw;
+
+  std::cout << ", \"predictions\": ";
+  std::cout << "[";
+  for (Prediction p : this->tracking.predict()) {
+    std::cout << "{";
+    std::cout << "\"id\": " << p.id;
+    std::cout << ", \"s\": " << p.s;
+    std::cout << ", \"d\": " << p.d;
+    std::cout << ", \"s_orig\": " << p.s_original;
+    std::cout << ", \"d_orig\": " << p.d_original;
+    std::cout << "},";
   }
+  std::cout << "]";
 
   std::map<std::tuple<std::string, std::string>, std::tuple<double, Path>> state_to_cost;
   double cost_avg = 0;
+
+  std::cout << ", \"transitions\": ";
+  std::cout << "[";
+
+
   for (const std::string &transition_s : STATES_S[this->state_s]) {
     for (const std::string &transition_d : STATES_D[this->state_d]) {
       Path path_s = build_path(transition_s);
@@ -156,12 +175,16 @@ Path BehaviorPlanner::next() {
       Path path;
       path.s = path_s.s;
       path.d = path_d.d;
-
-      std::cout << "  transition: " << transition_s << "/" 
-                << transition_d << ":\n ";
+      
+      std::cout << "{";
+      std::cout << " \"transition\": \"" << transition_s << "/" << transition_d << "\"";
+      std::cout << ", \"s\": " << path.s.back();
+      std::cout << ", \"d\": " << path.d.back();
       double cost = this->evaluate_path(path);
       state_to_cost[{transition_s, transition_d}] = {cost, path};
       cost_avg += cost;
+      
+      std::cout << "},";
     }
   }
   cost_avg /= STATES_S[this->state_s].size() * STATES_D[this->state_d].size();
@@ -188,10 +211,11 @@ Path BehaviorPlanner::next() {
     state_s_next = this->state_s;
     state_d_next = this->state_d;
     path_min = std::get<1>(state_to_cost[{state_s_next, state_d_next}]);
-    std::cout << "keep\n";
+    // std::cout << "keep\n";
   }
 
-  std::cout << "to: " << state_s_next << "/" << state_d_next << std::endl;
+  std::cout << "]";
+  std::cout << ", \"to\": \"" << state_s_next << "/" << state_d_next << "\"";
   this->state_s = state_s_next;
   this->state_d = state_d_next;
   this->path_prev = path_min;
