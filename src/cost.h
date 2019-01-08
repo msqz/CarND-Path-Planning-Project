@@ -9,9 +9,16 @@
 #include "obstacle.h"
 #include "path.h"
 #include "tracking.h"
+#include "limits"
 
 double sigmoid(double x) {
   return 1 / (1 + exp(-x));
+}
+
+double linear_eq(double s, std::vector<double> values_s, std::vector<double> values_d) {
+  double m = (values_d[1]-values_d[0])/(values_s[1]-values_s[0]);
+  double d_new = m * (s-values_s[0]) + values_d[0];
+  return d_new;
 }
 
 double evaluate_speed_limit(Path trajectory) {
@@ -65,57 +72,54 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
   double cost_max = 0.0;
   double dt = PATH_LENGTH * DELTA_T;
   for (const Prediction &prediction : predictions) {
-    // If right now it's behind on the same lane then I don't care
     Localization loc_pred;
     loc_pred.d = prediction.d_original;
     if (loc_pred.get_lane() == localization.get_lane() && 
         prediction.s_original < localization.s) {
-      // std::cout << "    ignoring " << prediction.id << "\n";
       continue;
     }
 
-    // Check if there is something on the sides
-    // First I need to find if the path is a curvy one
-    if (std::abs(path.d.front() - path.d.back()) > 0.1) {
-      double offset_s = CAR_LENGTH / 2;
-      double s_max = std::max(localization.s, prediction.s_original);
-      double s_min = std::min(localization.s, prediction.s_original);
-      double diff_s = (s_max - offset_s) - (s_min + offset_s);
-      if (diff_s <= 0) {
-        double cost = 1 + abs(diff_s);
-        if (cost > cost_max) {
-          cost_max = cost;
-        }
+    // Check if the path crosses trajectory of obstacle
+    // (straight line from it's original to predicted position)
+    double distance_min = std::numeric_limits<double>::max();
+    std::vector<double> pred_s = {prediction.s_original, prediction.s};
+    std::vector<double> pred_d = {prediction.d_original, prediction.d};
+    for (int i = 0; i < path.size(); i++) {
+      double d_left = linear_eq(path.s[i], pred_s, pred_d) - CAR_WIDTH/2;
+      double d_right = linear_eq(path.s[i], pred_s, pred_d) + CAR_WIDTH/2;
+      double d_left_my = path.d[i] - CAR_WIDTH/2;
+      double d_right_my = path.d[i] + CAR_WIDTH/2;
+      if (d_left <= d_left_my && d_left_my <= d_right ||
+          d_left <= d_right_my && d_right_my <= d_right){
+        //CRASH!!!!!! Distance from current s,d to crashing s,d
+        double delta_s = path.s[i] - localization.s;
+        double delta_d = path.d[i] - localization.d;
+        double distance = std::sqrt(pow(delta_s, 2) + pow(delta_d, 2));
+
+        if (distance < distance_min) {
+          distance_min = distance;
+        }        
       }
     }
 
-    // Check if path collide with any obstacle at it's predicted position or current position
-    // TODO check if trajectory crosses the predicted straight path of the obstacle
-    if (path.contains(prediction.s, prediction.d, 1.0, 0.5) ||
-        path.contains(prediction.s_original, prediction.d_original, 1.0, 0.5)) {
-      double distance = prediction.s - path.s.back();
-      double distance_original = prediction.s_original - s_stop;
-      if (distance < 0 || distance_original < 0) {
-        // I want to handle scenario when all paths are going to hit
-        // but the one with the largest distance can be selected.
-        // For negative distance being closer means higher cost
-        // (so at least it will hit with the minimal impact)
-        double cost = 1 + abs(std::max(distance, distance_original));
-        // There may be few obstacles colliding, need to evaluate against the nearest one
-        // Otherwise if I evaluate against the far one it could hit the nearest one
-        if (cost > cost_max) {
-          std::cout << "{";
-          std::cout << "\"id\": " << prediction.id;
-          std::cout << ", \"s\": " << prediction.s;
-          std::cout << ", \"d\": " << prediction.d;
-          std::cout << ", \"dist\": " << distance;
-          std::cout << ", \"dist_original\": " << distance_original;
-          std::cout << "},"; 
-          cost_max = cost;
-        }
+    if (distance_min < std::numeric_limits<double>::max()) {
+      std::cout << "{";
+      std::cout << "\"id\": " << prediction.id;
+      std::cout << ", \"s\": " << prediction.s;
+      std::cout << ", \"d\": " << prediction.d;
+      std::cout << ", \"dist\": " << distance_min;
+      std::cout << "},"; 
+
+      double cost = 999;
+      if (distance_min != 0) {
+        cost = 1 / distance_min;
+      }
+      if (cost > cost_max) {
+        cost_max = cost;
       }
     }
   }
+  
   return cost_max;
 }
 
