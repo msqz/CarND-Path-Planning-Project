@@ -20,7 +20,7 @@ using json = nlohmann::json;
 std::map<std::string, std::vector<std::string>> STATES_S = {
     {"STOP", {"ACC", "STOP"}},
     {"ACC", {"CRUISE", "ACC", "DECC"}},
-    {"DECC", {"CRUISE", "DECC", "ACC", "STOP"}},
+    {"DECC", {"CRUISE", "DECC", "ACC"}},
     {"CRUISE", {"ACC", "DECC", "CRUISE"}},
 };
 
@@ -82,7 +82,7 @@ class AccState : public State {
     double s_dot_i = localization.speed * MPH_TO_MS;
     double s_ddot_i = path_prev.get_acc_s(s_i);
 
-    double a = 0.4 * MAX_ACC;
+    double a = 0.2 * MAX_ACC;
     double s_f = s_i + (s_dot_i * t) + (a * pow(t, 2) / 2);
     double s_dot_f = s_dot_i + (a * t);
     double s_ddot_f = 0;

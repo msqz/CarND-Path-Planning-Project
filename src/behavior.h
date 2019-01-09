@@ -11,6 +11,7 @@ const double EFFICIENCY_WEIGHT = 2.0;
 const double CRASH_WEIGHT = 20.0;
 const double OFFROAD_WEIGHT = 10000.0;
 const double KEEP_RIGHT_WEIGHT = 0.0;
+const double PREDICTABILITY = 0.01;
 
 class BehaviorPlanner {
  private:
@@ -100,12 +101,15 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
 
   double cost_offroad = OFFROAD_WEIGHT * evaluate_offroad(path);
   double cost_keep_right = KEEP_RIGHT_WEIGHT * evaluate_keep_right(path);
+  double cost_predictability = PREDICTABILITY * evaluate_predictability(path, this->path_prev);
+  
   double cost = cost_speed_limit +
                 cost_max_acc +
                 cost_efficiency +
                 cost_crash +
                 cost_offroad +
-                cost_keep_right;
+                cost_keep_right +
+                cost_predictability;
 
   std::cout << ", \"cost\": ";
   std::cout << "{";
@@ -115,6 +119,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   std::cout << ", \"cr\": " << cost_crash;
   std::cout << ", \"of\": " << cost_offroad ;
   std::cout << ", \"kr\": " << cost_keep_right;
+  std::cout << ", \"pr\": " << cost_predictability;
   std::cout << ", \"total\": " << cost;
   std::cout << "}";
   std::cout << "}";
@@ -184,6 +189,12 @@ Path BehaviorPlanner::next() {
       state_to_cost[{transition_s, transition_d}] = {cost, path};
       cost_avg += cost;
       
+      json j;
+      j["next_s"] = path.s;
+      j["next_d"] = path.d;
+      std::cout << ", \"path_s\": " << j["next_s"].dump();
+      std::cout << ", \"path_d\": " << j["next_d"].dump();
+
       std::cout << "},";
     }
   }

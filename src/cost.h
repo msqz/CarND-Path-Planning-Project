@@ -72,19 +72,39 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
   double cost_max = 0.0;
   double dt = PATH_LENGTH * DELTA_T;
   for (const Prediction &prediction : predictions) {
+    // Ignore when it's moving backwards
+    if (prediction.s < prediction.s_original) {
+      continue;  
+    }
+
+    // Ignore when it's trajectory is not going to reach me
+    if (prediction.s + CAR_LENGTH/2 < localization.s - CAR_LENGTH/2) {
+      continue; 
+    }
+
+    // Ignore when it's out of path range
+    if (prediction.s_original >= path.s.back() + CAR_LENGTH/2) {
+      continue;  
+    }
+
+    // Ignore cars behind me on the same lane
     Localization loc_pred;
     loc_pred.d = prediction.d_original;
     if (loc_pred.get_lane() == localization.get_lane() && 
-        prediction.s_original < localization.s) {
+        prediction.s_original < localization.s - CAR_LENGTH/2) {
       continue;
     }
 
     // Check if the path crosses trajectory of obstacle
     // (straight line from it's original to predicted position)
     double distance_min = std::numeric_limits<double>::max();
-    std::vector<double> pred_s = {prediction.s_original, prediction.s};
+    std::vector<double> pred_s = {prediction.s_original - CAR_LENGTH/2 - FRONT_DISTANCE, prediction.s + CAR_LENGTH/2 + BACK_DISTANCE};
     std::vector<double> pred_d = {prediction.d_original, prediction.d};
     for (int i = 0; i < path.size(); i++) {
+    	// Skip segments which are outside the obstacle trajectory
+			if (path.s[i] < pred_s[0] || path.s[i] > pred_s[1]) {
+				continue;
+			}
       double d_left = linear_eq(path.s[i], pred_s, pred_d) - CAR_WIDTH/2;
       double d_right = linear_eq(path.s[i], pred_s, pred_d) + CAR_WIDTH/2;
       double d_left_my = path.d[i] - CAR_WIDTH/2;
@@ -137,6 +157,18 @@ double evaluate_keep_right(Path path) {
     return (10.0 - path.d.back()) / 10.0;
   }
   return 0;
+}
+
+double evaluate_predictability(Path path, Path path_prev) {
+  if (path.size() == 0 || path_prev.size() == 0) {
+    return 0;
+  }
+  Localization prev;
+  prev.d = path_prev.d.back();
+  Localization curr;
+  curr.d = path.d.back();
+  
+  return std::abs(prev.get_lane() - curr.get_lane());
 }
 
 #endif
