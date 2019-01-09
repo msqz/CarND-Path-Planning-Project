@@ -32,7 +32,8 @@ double evaluate_speed_limit(Path trajectory) {
   return 0;
 }
 
-double evaluate_max_acc(Path path, Localization localization) {
+double evaluate_max_acc(Path path, Localization localization) { 
+  // Use x/y trajectory here
   if (path.get_max_acc() > MAX_ACC) {
     return 1;
   }
@@ -63,6 +64,7 @@ double evaluate_efficiency(Path trajectory) {
 double evaluate_crash(Path path, Localization localization, std::vector<Prediction> predictions) {
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
+  // TODO which braking decc use as reference point? Should I put add/decc into Path?
   double t_stop = v_max / BRAKING_DECC;
   // braking distance + buffer distance
   double s_stop = localization.s +
@@ -105,10 +107,12 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
 			if (path.s[i] < pred_s[0] || path.s[i] > pred_s[1]) {
 				continue;
 			}
+			// d_left/d_right are projected edges of obstacle trajectory at s
       double d_left = linear_eq(path.s[i], pred_s, pred_d) - CAR_WIDTH/2;
       double d_right = linear_eq(path.s[i], pred_s, pred_d) + CAR_WIDTH/2;
       double d_left_my = path.d[i] - CAR_WIDTH/2;
       double d_right_my = path.d[i] + CAR_WIDTH/2;
+      // Checking if my car edges collide with obstacle edges
       if (d_left <= d_left_my && d_left_my <= d_right ||
           d_left <= d_right_my && d_right_my <= d_right){
         //CRASH!!!!!! Distance from current s,d to crashing s,d

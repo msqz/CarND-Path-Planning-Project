@@ -18,10 +18,14 @@
 using json = nlohmann::json;
 
 std::map<std::string, std::vector<std::string>> STATES_S = {
-    {"STOP", {"ACC", "STOP"}},
-    {"ACC", {"CRUISE", "ACC", "DECC"}},
-    {"DECC", {"CRUISE", "DECC", "ACC"}},
-    {"CRUISE", {"ACC", "DECC", "CRUISE"}},
+    {"STOP", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "STOP"}},
+    {"ACC_SOFT", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"ACC_MED", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"ACC_HARD", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"DECC_SOFT", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"DECC_MED", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"DECC_HARD", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"CRUISE", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD", "CRUISE"}},
 };
 
 std::map<std::string, std::vector<std::string>> STATES_D = {
@@ -71,9 +75,9 @@ class State {
   virtual Path build_path(const Localization localization, Path path_prev) = 0;
 };
 
-class AccState : public State {
+class AccState {
  public:
-  Path build_path(const Localization localization, Path path_prev) {
+  Path build_path(const Localization localization, Path path_prev, double a) {
     Path path;
 
     double t = DELTA_T * PATH_LENGTH;
@@ -82,7 +86,6 @@ class AccState : public State {
     double s_dot_i = localization.speed * MPH_TO_MS;
     double s_ddot_i = path_prev.get_acc_s(s_i);
 
-    double a = 0.2 * MAX_ACC;
     double s_f = s_i + (s_dot_i * t) + (a * pow(t, 2) / 2);
     double s_dot_f = s_dot_i + (a * t);
     double s_ddot_f = 0;
@@ -109,16 +112,16 @@ class CruiseState : public State {
   }
 };
 
-class DeccState : public State {
+class DeccState {
  public:
-  Path build_path(const Localization localization, Path path_prev) {
+  Path build_path(const Localization localization, Path path_prev, double a) {
     Path path;
     double v_init = localization.speed * MPH_TO_MS;
     double s_init = localization.s;
 
     for (int i = 0; i < PATH_LENGTH; i++) {
       double t = (i + 1) * DELTA_T;
-      double v = v_init - (BRAKING_DECC * t);
+      double v = v_init - (a * t);
       double delta_s = (v_init + v) * t / 2;
       double s = s_init + delta_s;
       if (s < s_init) {

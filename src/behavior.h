@@ -46,16 +46,8 @@ void BehaviorPlanner::set_localization(const Localization &localization) {
 Path BehaviorPlanner::build_path(const std::string &state) {
   Path path;
 
-  if (state == "ACC") {
-    AccState state = AccState();
-    return state.build_path(this->localization, this->path_prev);
-  }
   if (state == "CRUISE") {
     CruiseState state = CruiseState();
-    return state.build_path(this->localization, this->path_prev);
-  }
-  if (state == "DECC") {
-    DeccState state = DeccState();
     return state.build_path(this->localization, this->path_prev);
   }
   if (state == "STOP") {
@@ -81,6 +73,30 @@ Path BehaviorPlanner::build_path(const std::string &state) {
   if (state == "DOUBLE_RIGHT") {
     DoubleRightState state = DoubleRightState();
     return state.build_path(this->localization, this->path_prev);
+  }
+  if (state == "ACC_SOFT") {
+    AccState state = AccState();
+    return state.build_path(this->localization, this->path_prev, SOFT_ACC_RATE);
+  }
+  if (state == "ACC_MED") {
+    AccState state = AccState();
+    return state.build_path(this->localization, this->path_prev, MED_ACC_RATE);
+  }
+  if (state == "ACC_HARD") {
+    AccState state = AccState();
+    return state.build_path(this->localization, this->path_prev, HARD_ACC_RATE);
+  }
+  if (state == "DECC_SOFT") {
+    DeccState state = DeccState();
+    return state.build_path(this->localization, this->path_prev, SOFT_DECC_RATE);
+  }
+  if (state == "DECC_MED") {
+    DeccState state = DeccState();
+    return state.build_path(this->localization, this->path_prev, MED_DECC_RATE);
+  }
+  if (state == "DECC_HARD") {
+    DeccState state = DeccState();
+    return state.build_path(this->localization, this->path_prev, HARD_DECC_RATE);
   }
 
   return path;

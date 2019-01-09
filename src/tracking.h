@@ -27,7 +27,7 @@ struct Tracking {
   std::map<int, std::vector<TrackingRecord>> history;
 
   void add(Obstacle obstacle) {
-    //TODO parametrize
+    // Don't track object which are far away
     if (obstacle.d < 0 || obstacle.d > 12) {
       return;
     }
@@ -72,30 +72,13 @@ struct Tracking {
         // Can predict position based on velocity
         double dt = (tracking.back().timestamp - tracking.front().timestamp) / 1000.0;
         double v_s = (tracking.back().obstacle.s - tracking.front().obstacle.s) / dt;        
-        double v_d = (tracking.back().obstacle.d - tracking.front().obstacle.d) / dt;        
 
         prediction.s = tracking.back().obstacle.s + (v_s * t);
-/*        prediction.d = tracking.back().obstacle.d + (v_d * t);*/
+        // Use current d position - predicting d-velocity is too error prone
         prediction.d = tracking.back().obstacle.d;
         prediction.s_original = tracking.back().obstacle.s;
         prediction.d_original = tracking.back().obstacle.d;
         predictions.push_back(prediction);
-/*       } else {*/
-/*         // Can predict position based on velocity and acceleration*/
-/*         double dt_0 = (tracking[1].timestamp - tracking[0].timestamp) / 1000.0;*/
-/*         double dt_1 = (tracking[2].timestamp - tracking[1].timestamp) / 1000.0;*/
-/*         double v_s_0 = (tracking[1].obstacle.s - tracking[0].obstacle.s) / dt_0;*/
-/*         double v_s_1 = (tracking[2].obstacle.s - tracking[1].obstacle.s) / dt_1;*/
-/*         double v_d_0 = (tracking[1].obstacle.d - tracking[0].obstacle.d) / dt_0;*/
-/*         double v_d_1 = (tracking[2].obstacle.d - tracking[1].obstacle.d) / dt_1;*/
-/*         double a_s = v_s_1 - v_s_0 / dt_1;*/
-/*         double a_d = v_d_1 - v_d_0 / dt_1;*/
-
-/*         prediction.s = tracking[2].obstacle.s + (v_s_1 * t) + (a_s * pow(t, 2) / 2);*/
-/*         prediction.d = tracking[2].obstacle.d + (v_d_1 * t) + (a_d * pow(t, 2) / 2);*/
-/*         prediction.s_original = tracking.back().obstacle.s;*/
-/*         prediction.d_original = tracking.back().obstacle.d;*/
-/*         predictions.push_back(prediction);*/
       }
     }
 
