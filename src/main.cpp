@@ -139,30 +139,15 @@ int main() {
             });
           }
           planner.set_obstacles(obstacles);
-          Path path = planner.next();
-          Trajectory trajectory = generator.generate(path);
+          Trajectory trajectory_prev = {
+            .x = previous_path_x,
+            .y = previous_path_y,
+          };
 
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          Path path = planner.next(generator, trajectory_prev, end_path_s);
 
-          if (previous_path_x.size() > 0) {
-            next_x_vals.push_back(previous_path_x[0]);
-            next_y_vals.push_back(previous_path_y[0]);
-          } else {
-            next_x_vals.push_back(trajectory.x[0]);
-            next_y_vals.push_back(trajectory.y[0]);
-          }
-
-          for (int i = 1; i < trajectory.size(); i++) {
-            double delta_x = trajectory.x[i] - trajectory.x[i - 1];
-            double delta_y = trajectory.y[i] - trajectory.y[i - 1];
-
-            next_x_vals.push_back(next_x_vals[i - 1] + delta_x);
-            next_y_vals.push_back(next_y_vals[i - 1] + delta_y);
-          }
-
-          msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = next_y_vals;
+          msgJson["next_x"] = path.trajectory.x;
+          msgJson["next_y"] = path.trajectory.y;
 
           json j;
           j["next_s"] = path.s;

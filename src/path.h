@@ -3,10 +3,13 @@
 
 #include <vector>
 #include "constraints.h"
+#include "trajectory.h"
 
 struct Path {
   std::vector<double> s;
   std::vector<double> d;
+  Trajectory trajectory;
+
   int idx_latency;
 
   double get_velocity(double s) {
@@ -45,12 +48,12 @@ struct Path {
     return v;
   }
 
-  double get_max_acc() {
+  double get_acc_max_s() {
     double a_max = 0.0;
     for (int i = 2; i < this->size(); i++) {
       double v_0 = (this->s[i - 1] - this->s[i - 2]) / DELTA_T;
       double v_1 = (this->s[i] - this->s[i - 1]) / DELTA_T;
-      double a = (v_1 - v_0) / DELTA_T;
+      double a = abs((v_1 - v_0)) / DELTA_T;
       if (a > a_max) {
         a_max = a;
       }

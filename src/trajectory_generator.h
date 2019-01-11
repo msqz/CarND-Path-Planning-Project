@@ -1,3 +1,6 @@
+#ifndef TRAJECTORYGENERATOR_H
+#define TRAJECTORYGENERATOR_H
+
 #include <vector>
 #include "path.h"
 #include "trajectory.h"
@@ -23,6 +26,36 @@ struct Map {
 class TrajectoryGenerator {
  private:
   Map map;
+
+  std::tuple<Waypoint, Waypoint> get_nearest_waypoints(double s) {
+    int n_waypoints = this->map.size();
+    int wp_ahead;
+    for (int i = 0; i < n_waypoints; i++) {
+      if (this->map.s[i] >= s) {
+        wp_ahead = i;
+        break;
+      }
+    }
+    int wp_behind = wp_ahead - 1;
+    if (wp_behind < 0) {
+      wp_behind = (n_waypoints + wp_behind);
+    }
+
+    Waypoint wp_1 = {
+      .x = this->map.x[wp_behind],
+      .y = this->map.y[wp_behind],
+      .dx = this->map.dx[wp_behind],
+      .dy = this->map.dy[wp_behind],
+    };
+    Waypoint wp_2 = {
+      .x = this->map.x[wp_ahead],
+      .y = this->map.y[wp_ahead],
+      .dx = this->map.dx[wp_ahead],
+      .dy = this->map.dy[wp_ahead],
+    };
+
+    return {wp_1, wp_2};
+  }
 
   std::vector<double> get_xy(double s, double d) {
     int n_waypoints = this->map.size();
@@ -61,6 +94,7 @@ class TrajectoryGenerator {
     if (idx_start > idx_end) {
       idx_end += n_waypoints + 1;
     }
+
     while (idx_start < idx_end) {
       int idx = idx_start;
       if (idx > n_waypoints) {
@@ -103,21 +137,56 @@ class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Map &map);
 
-  Trajectory generate(const Path &path);
+  Trajectory generate(const Path &path, Trajectory &trajectory_prev, double end_path_s);
 };
 
 TrajectoryGenerator::TrajectoryGenerator(const Map &map) {
   this->map = map;
 }
 
-Trajectory TrajectoryGenerator::generate(const Path &path){
+Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajectory_prev, double end_path_s){
   Trajectory trajectory;
 
   for (int i = 0; i < path.s.size(); i++) {
     std::vector<double> xy = this->get_xy(path.s[i], path.d[i]);
+
     trajectory.x.push_back(xy[0]);
     trajectory.y.push_back(xy[1]);
+    // trajectory.waypoints.push_back(this->get_nearest_waypoints(path.s[i]));
+  }
+
+  std::vector<double> next_x_vals;
+  std::vector<double> next_y_vals;
+
+  if (trajectory_prev.size() > 0) {
+    next_x_vals.push_back(trajectory_prev.x[0]);
+    next_y_vals.push_back(trajectory_prev.y[0]);
+  } else {
+    next_x_vals.push_back(trajectory.x[0]);
+    next_y_vals.push_back(trajectory.y[0]);
+  }
+
+  for (int i = 1; i < trajectory.size(); i++) {
+    double delta_x = trajectory.x[i] - trajectory.x[i - 1];
+    double delta_y = trajectory.y[i] - trajectory.y[i - 1];
+
+    next_x_vals.push_back(next_x_vals[i - 1] + delta_x);
+    next_y_vals.push_back(next_y_vals[i - 1] + delta_y);
+  }
+
+  trajectory.x = next_x_vals;
+  trajectory.y = next_y_vals;
+
+  double s = end_path_s;
+  // double s = path.s[0];
+  trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
+  for (int i = 1; i < path.s.size(); i++) {
+    double delta_s = path.s[i] - path.s[i-1];
+    s += delta_s;
+    trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
   }
 
   return trajectory;
 };
+
+#endif

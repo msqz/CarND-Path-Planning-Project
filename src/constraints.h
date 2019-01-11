@@ -12,7 +12,7 @@ const double SPEED_LIMIT = 50.0;
 const double BUFFER_V = 3.0;
 const double MPH_TO_MS = 0.447;
 const double MS_TO_MPH = 1 / 0.447;
-const int PATH_LENGTH = 100;
+const int PATH_LENGTH = 150;
 const double TRACK_LENGTH = 6945.554;
 const double LANE_WIDTH = 4.0;
 

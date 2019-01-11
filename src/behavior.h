@@ -1,12 +1,16 @@
+#ifndef BEHAVIOR_H
+#define BEHAVIOR_H
+
 #include "cost.h"
 #include "obstacle.h"
 #include "path.h"
 #include "state.h"
 #include "tracking.h"
 #include "json.hpp"
+#include "trajectory_generator.h"
 
 const double SPEED_LIMIT_WEIGHT = 10.0;
-const double MAX_ACC_WEIGHT = 2.0;
+const double MAX_ACC_WEIGHT = 10.0;
 const double EFFICIENCY_WEIGHT = 2.0;
 const double CRASH_WEIGHT = 20.0;
 const double OFFROAD_WEIGHT = 10000.0;
@@ -29,7 +33,7 @@ class BehaviorPlanner {
   void set_obstacles(const std::vector<Obstacle> &obstacles);
   void set_localization(const Localization &localization);
 
-  Path next();
+  Path next(TrajectoryGenerator generator, Trajectory trajectory_prev, double end_path_s);
 };
 
 void BehaviorPlanner::set_obstacles(const std::vector<Obstacle> &obstacles) {
@@ -143,7 +147,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   return cost;
 }
 
-Path BehaviorPlanner::next() {
+Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_prev, double end_path_s) {
   std::string state_s_next;
   std::string state_d_next;
   double cost_min = std::numeric_limits<double>::max();
@@ -196,6 +200,7 @@ Path BehaviorPlanner::next() {
       Path path;
       path.s = path_s.s;
       path.d = path_d.d;
+      path.trajectory = generator.generate(path, trajectory_prev, end_path_s);
       
       std::cout << "{";
       std::cout << " \"transition\": \"" << transition_s << "/" << transition_d << "\"";
@@ -248,3 +253,5 @@ Path BehaviorPlanner::next() {
   this->path_prev = path_min;
   return path_min;
 };
+
+#endif

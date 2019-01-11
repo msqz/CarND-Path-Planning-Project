@@ -5,19 +5,20 @@
 #include <iostream>
 #include "constraints.h"
 #include "json.hpp"
+#include "limits"
 #include "localization.h"
 #include "obstacle.h"
 #include "path.h"
 #include "tracking.h"
-#include "limits"
+#include "trajectory.h"
 
 double sigmoid(double x) {
   return 1 / (1 + exp(-x));
 }
 
 double linear_eq(double s, std::vector<double> values_s, std::vector<double> values_d) {
-  double m = (values_d[1]-values_d[0])/(values_s[1]-values_s[0]);
-  double d_new = m * (s-values_s[0]) + values_d[0];
+  double m = (values_d[1] - values_d[0]) / (values_s[1] - values_s[0]);
+  double d_new = m * (s - values_s[0]) + values_d[0];
   return d_new;
 }
 
@@ -32,9 +33,44 @@ double evaluate_speed_limit(Path trajectory) {
   return 0;
 }
 
-double evaluate_max_acc(Path path, Localization localization) { 
+double evaluate_max_acc(Path path, Localization localization) {
   // Use x/y trajectory here
-  if (path.get_max_acc() > MAX_ACC) {
+  double a_c_max = 0.0;
+
+  for (int i = 1; i < path.size() ; i++) {
+    std::tuple<Waypoint, Waypoint> waypoints = path.trajectory.waypoints[i];
+    Waypoint wp_1 = std::get<0>(waypoints);
+    Waypoint wp_2 = std::get<1>(waypoints);
+
+    //TODO hack to overcome the undefined radius
+    double m_1 = wp_1.dy / (wp_1.dx != 0.0 ? wp_1.dx : 0.0001);
+    double m_2 = wp_2.dy / (wp_2.dx != 0.0 ? wp_2.dx : 0.0001);
+
+    double theta = atan(abs((m_2 - m_1) / (1 + m_2 * m_1))) / 2.0;
+    double dist_wp = sqrt(pow(wp_2.x - wp_1.x, 2) + pow(wp_2.y - wp_1.y, 2));
+    if (theta == 0 || dist_wp == 0) {
+      continue;
+    }
+
+    double r = (dist_wp / 2.0) / (sin(theta));
+    
+    double dist_xy = sqrt(pow(path.trajectory.x[i] - path.trajectory.x[i - 1], 2) +
+                          pow(path.trajectory.y[i] - path.trajectory.y[i - 1], 2));
+
+    double v = dist_xy / DELTA_T;
+    double a_c = abs(pow(v, 2) / r);
+
+    if (a_c > a_c_max) {
+      a_c_max = a_c;
+    }
+  }
+
+  double a_max = abs(path.get_acc_max_s());
+  std::cout << "\"a_c_max\": " << a_c_max;
+  std::cout << ", \"a_max\": " << a_max;
+  std::cout << ", ";
+
+  if (a_max + a_c_max > 10) {
     return 1;
   }
 
@@ -68,53 +104,55 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
   double t_stop = v_max / BRAKING_DECC;
   // braking distance + buffer distance
   double s_stop = localization.s +
-    ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
-    FRONT_DISTANCE;
+                  ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
+                  FRONT_DISTANCE;
+
+  //TODO USE S_STOP WHEN CALCULATING CRASH - otherwise it keeps very large distance from vehicle ahead
 
   double cost_max = 0.0;
   double dt = PATH_LENGTH * DELTA_T;
   for (const Prediction &prediction : predictions) {
     // Ignore when it's moving backwards
     if (prediction.s < prediction.s_original) {
-      continue;  
+      continue;
     }
 
     // Ignore when it's trajectory is not going to reach me
-    if (prediction.s + CAR_LENGTH/2 < localization.s - CAR_LENGTH/2) {
-      continue; 
+    if (prediction.s + CAR_LENGTH / 2 < localization.s - CAR_LENGTH / 2) {
+      continue;
     }
 
     // Ignore when it's out of path range
-    if (prediction.s_original >= path.s.back() + CAR_LENGTH/2) {
-      continue;  
+    if (prediction.s_original >= path.s.back() + CAR_LENGTH / 2) {
+      continue;
     }
 
     // Ignore cars behind me on the same lane
     Localization loc_pred;
     loc_pred.d = prediction.d_original;
-    if (loc_pred.get_lane() == localization.get_lane() && 
-        prediction.s_original < localization.s - CAR_LENGTH/2) {
+    if (loc_pred.get_lane() == localization.get_lane() &&
+        prediction.s_original < localization.s - CAR_LENGTH / 2) {
       continue;
     }
 
     // Check if the path crosses trajectory of obstacle
     // (straight line from it's original to predicted position)
     double distance_min = std::numeric_limits<double>::max();
-    std::vector<double> pred_s = {prediction.s_original - CAR_LENGTH/2 - FRONT_DISTANCE, prediction.s + CAR_LENGTH/2 + BACK_DISTANCE};
+    std::vector<double> pred_s = {prediction.s_original - CAR_LENGTH / 2 - FRONT_DISTANCE, prediction.s + CAR_LENGTH / 2 + BACK_DISTANCE};
     std::vector<double> pred_d = {prediction.d_original, prediction.d};
     for (int i = 0; i < path.size(); i++) {
-    	// Skip segments which are outside the obstacle trajectory
-			if (path.s[i] < pred_s[0] || path.s[i] > pred_s[1]) {
-				continue;
-			}
-			// d_left/d_right are projected edges of obstacle trajectory at s
-      double d_left = linear_eq(path.s[i], pred_s, pred_d) - CAR_WIDTH/2;
-      double d_right = linear_eq(path.s[i], pred_s, pred_d) + CAR_WIDTH/2;
-      double d_left_my = path.d[i] - CAR_WIDTH/2;
-      double d_right_my = path.d[i] + CAR_WIDTH/2;
+      // Skip segments which are outside the obstacle trajectory
+      if (path.s[i] < pred_s[0] || path.s[i] > pred_s[1]) {
+        continue;
+      }
+      // d_left/d_right are projected edges of obstacle trajectory at s
+      double d_left = linear_eq(path.s[i], pred_s, pred_d) - CAR_WIDTH / 2;
+      double d_right = linear_eq(path.s[i], pred_s, pred_d) + CAR_WIDTH / 2;
+      double d_left_my = path.d[i] - CAR_WIDTH / 2;
+      double d_right_my = path.d[i] + CAR_WIDTH / 2;
       // Checking if my car edges collide with obstacle edges
       if (d_left <= d_left_my && d_left_my <= d_right ||
-          d_left <= d_right_my && d_right_my <= d_right){
+          d_left <= d_right_my && d_right_my <= d_right) {
         //CRASH!!!!!! Distance from current s,d to crashing s,d
         double delta_s = path.s[i] - localization.s;
         double delta_d = path.d[i] - localization.d;
@@ -122,7 +160,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
 
         if (distance < distance_min) {
           distance_min = distance;
-        }        
+        }
       }
     }
 
@@ -132,7 +170,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
       std::cout << ", \"s\": " << prediction.s;
       std::cout << ", \"d\": " << prediction.d;
       std::cout << ", \"dist\": " << distance_min;
-      std::cout << "},"; 
+      std::cout << "},";
 
       double cost = 999;
       if (distance_min != 0) {
@@ -143,7 +181,7 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
       }
     }
   }
-  
+
   return cost_max;
 }
 
@@ -171,7 +209,7 @@ double evaluate_predictability(Path path, Path path_prev) {
   prev.d = path_prev.d.back();
   Localization curr;
   curr.d = path.d.back();
-  
+
   return std::abs(prev.get_lane() - curr.get_lane());
 }
 
