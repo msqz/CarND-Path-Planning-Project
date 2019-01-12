@@ -26,7 +26,7 @@ const double MED_ACC_RATE = 2.0;
 const double HARD_ACC_RATE = 3.5;
 const double SOFT_DECC_RATE = 1.0;
 const double MED_DECC_RATE = 4.0;
-const double HARD_DECC_RATE = 8.0;
+const double HARD_DECC_RATE = 4.0;
 
 const double BRAKING_DECC = 0.7 * MAX_ACC;
 

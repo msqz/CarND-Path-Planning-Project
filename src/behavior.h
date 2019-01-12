@@ -1,12 +1,13 @@
 #ifndef BEHAVIOR_H
 #define BEHAVIOR_H
 
+#include <algorithm>
 #include "cost.h"
+#include "json.hpp"
 #include "obstacle.h"
 #include "path.h"
 #include "state.h"
 #include "tracking.h"
-#include "json.hpp"
 #include "trajectory_generator.h"
 
 const double SPEED_LIMIT_WEIGHT = 10.0;
@@ -122,7 +123,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   double cost_offroad = OFFROAD_WEIGHT * evaluate_offroad(path);
   double cost_keep_right = KEEP_RIGHT_WEIGHT * evaluate_keep_right(path);
   double cost_predictability = PREDICTABILITY * evaluate_predictability(path, this->path_prev);
-  
+
   double cost = cost_speed_limit +
                 cost_max_acc +
                 cost_efficiency +
@@ -137,7 +138,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   std::cout << ", \"ma\": " << cost_max_acc;
   std::cout << ", \"ef\": " << cost_efficiency;
   std::cout << ", \"cr\": " << cost_crash;
-  std::cout << ", \"of\": " << cost_offroad ;
+  std::cout << ", \"of\": " << cost_offroad;
   std::cout << ", \"kr\": " << cost_keep_right;
   std::cout << ", \"pr\": " << cost_predictability;
   std::cout << ", \"total\": " << cost;
@@ -156,14 +157,13 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
   // This is the crucial part to overcome the latency
   this->localization.speed = this->path_prev.get_velocity(this->localization.s) * MS_TO_MPH;
   for (int i = 1; i < this->path_prev.size(); i++) {
-    if (this->path_prev.s[i - 1] <= this->localization.s && 
-      this->localization.s <= this->path_prev.s[i]) {
+    if (this->path_prev.s[i - 1] <= this->localization.s &&
+        this->localization.s <= this->path_prev.s[i]) {
       this->localization.d = this->path_prev.d[i];
       break;
     }
   }
 
-  
   std::cout << ", \"from\": \"" << this->state_s << "/" << this->state_d << "\"";
   std::cout << ", \"v_s\": " << this->localization.speed;
   std::cout << ", \"a_s\": " << path_prev.get_acc_s(localization.s);
@@ -171,7 +171,8 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
   std::cout << ", \"a_d\": " << path_prev.get_acc_d(localization.d);
   std::cout << ", \"s\": " << this->localization.s;
   std::cout << ", \"d\": " << this->localization.d;
-  std::cout << ", \"yaw\": " << this->localization.yaw;
+  std::cout << ", \"x\": " << this->localization.x;
+  std::cout << ", \"y\": " << this->localization.y;
 
   std::cout << ", \"predictions\": ";
   std::cout << "[";
@@ -192,7 +193,6 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
   std::cout << ", \"transitions\": ";
   std::cout << "[";
 
-
   for (const std::string &transition_s : STATES_S[this->state_s]) {
     for (const std::string &transition_d : STATES_D[this->state_d]) {
       Path path_s = build_path(transition_s);
@@ -200,8 +200,22 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
       Path path;
       path.s = path_s.s;
       path.d = path_d.d;
-      path.trajectory = generator.generate(path, trajectory_prev, end_path_s);
-      
+
+      double x_last = localization.x;
+      double y_last = localization.y;
+
+      // if (trajectory_prev.size() > 0) {
+      //   for (int i = 1; i < this->path_prev.trajectory.x.size(); i++) {
+      //     if (this->path_prev.trajectory.x[i] == trajectory_prev.x[0] &&
+      //         this->path_prev.trajectory.y[i] == trajectory_prev.y[0]) {
+      //           x_last = this->path_prev.trajectory.x[i-1];
+      //           y_last = this->path_prev.trajectory.y[i-1];
+      //     }
+      //   }
+      // }
+
+      path.trajectory = generator.generate(path, trajectory_prev, end_path_s, x_last, y_last);
+
       std::cout << "{";
       std::cout << " \"transition\": \"" << transition_s << "/" << transition_d << "\"";
       std::cout << ", \"s\": " << path.s.back();
@@ -209,7 +223,7 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
       double cost = this->evaluate_path(path);
       state_to_cost[{transition_s, transition_d}] = {cost, path};
       cost_avg += cost;
-      
+
       json j;
       j["next_s"] = path.s;
       j["next_d"] = path.d;
@@ -243,7 +257,6 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
     state_s_next = this->state_s;
     state_d_next = this->state_d;
     path_min = std::get<1>(state_to_cost[{state_s_next, state_d_next}]);
-    // std::cout << "keep\n";
   }
 
   std::cout << "]";

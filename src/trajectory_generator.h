@@ -1,12 +1,13 @@
 #ifndef TRAJECTORYGENERATOR_H
 #define TRAJECTORYGENERATOR_H
 
+#include <math.h>
 #include <vector>
-#include "path.h"
-#include "trajectory.h"
-#include "spline.h"
 #include "constraints.h"
 #include "localization.h"
+#include "path.h"
+#include "spline.h"
+#include "trajectory.h"
 
 const int WAYPOINTS_AHEAD = 10;
 const int WAYPOINTS_BEHIND = 5;
@@ -42,19 +43,79 @@ class TrajectoryGenerator {
     }
 
     Waypoint wp_1 = {
-      .x = this->map.x[wp_behind],
-      .y = this->map.y[wp_behind],
-      .dx = this->map.dx[wp_behind],
-      .dy = this->map.dy[wp_behind],
+        .x = this->map.x[wp_behind],
+        .y = this->map.y[wp_behind],
+        .dx = this->map.dx[wp_behind],
+        .dy = this->map.dy[wp_behind],
     };
     Waypoint wp_2 = {
-      .x = this->map.x[wp_ahead],
-      .y = this->map.y[wp_ahead],
-      .dx = this->map.dx[wp_ahead],
-      .dy = this->map.dy[wp_ahead],
+        .x = this->map.x[wp_ahead],
+        .y = this->map.y[wp_ahead],
+        .dx = this->map.dx[wp_ahead],
+        .dy = this->map.dy[wp_ahead],
     };
 
     return {wp_1, wp_2};
+  }
+
+  std::vector<double> get_xy2(double s, double d) {
+    int prev_wp = -1;
+
+    while (s > this->map.s[prev_wp + 1] && (prev_wp < (int)(this->map.s.size() - 1))) {
+      prev_wp++;
+    }
+
+    int wp2 = (prev_wp + 1) % this->map.x.size();
+
+    double heading = atan2((this->map.y[wp2] - this->map.y[prev_wp]), (this->map.x[wp2] - this->map.x[prev_wp]));
+    // the x,y,s along the segment
+    double seg_s = (s - this->map.s[prev_wp]);
+
+    double seg_x = this->map.x[prev_wp] + seg_s * cos(heading);
+    double seg_y = this->map.y[prev_wp] + seg_s * sin(heading);
+
+    double perp_heading = heading - M_PI / 2;
+
+    double x = seg_x + d * cos(perp_heading);
+    double y = seg_y + d * sin(perp_heading);
+    
+
+    return {x, y};
+  }
+
+  std::vector<tk::spline> get_splines(double s, double d) {
+    int wp_30_idx;
+    int wp_60_idx;
+    int wp_90_idx;
+    for (int i = 1; i < this->map.size(); i++) {
+      if (this->map.s[i - 1] <= s + 30 && s + 30 <= this->map.s[i]) {
+        wp_30_idx = i;
+      } else if (this->map.s[i - 1] <= s + 60 && s + 60 <= this->map.s[i]) {
+        wp_60_idx = i;
+      } else if (this->map.s[i - 1] <= s + 90 && s + 90 <= this->map.s[i]) {
+        wp_90_idx = i;
+      }
+    }
+
+    std::vector<double> s_values{this->map.s[wp_30_idx], this->map.s[wp_60_idx], this->map.s[wp_90_idx]};
+    std::vector<double> x_values{this->map.x[wp_30_idx], this->map.x[wp_60_idx], this->map.x[wp_90_idx]};
+    std::vector<double> y_values{this->map.y[wp_30_idx], this->map.y[wp_60_idx], this->map.y[wp_90_idx]};
+    std::vector<double> dx_values{this->map.dx[wp_30_idx], this->map.dx[wp_60_idx], this->map.dx[wp_90_idx]};
+    std::vector<double> dy_values{this->map.dy[wp_30_idx], this->map.dy[wp_60_idx], this->map.dy[wp_90_idx]};
+
+    tk::spline spline_s_x;
+    spline_s_x.set_points(s_values, x_values);
+
+    tk::spline spline_s_y;
+    spline_s_y.set_points(s_values, y_values);
+
+    tk::spline spline_s_dx;
+    spline_s_dx.set_points(s_values, dx_values);
+
+    tk::spline spline_s_dy;
+    spline_s_dy.set_points(s_values, dy_values);
+
+    return {spline_s_x, spline_s_y, spline_s_dx, spline_s_dy};
   }
 
   std::vector<double> get_xy(double s, double d) {
@@ -137,14 +198,14 @@ class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Map &map);
 
-  Trajectory generate(const Path &path, Trajectory &trajectory_prev, double end_path_s);
+  Trajectory generate(const Path &path, Trajectory &trajectory_prev, double end_path_s, double x_last, double y_last);
 };
 
 TrajectoryGenerator::TrajectoryGenerator(const Map &map) {
   this->map = map;
 }
 
-Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajectory_prev, double end_path_s){
+Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajectory_prev, double end_path_s, double x_last, double y_last) {
   Trajectory trajectory;
 
   for (int i = 0; i < path.s.size(); i++) {
@@ -152,13 +213,27 @@ Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajector
 
     trajectory.x.push_back(xy[0]);
     trajectory.y.push_back(xy[1]);
-    // trajectory.waypoints.push_back(this->get_nearest_waypoints(path.s[i]));
+    trajectory.waypoints.push_back(this->get_nearest_waypoints(path.s[i]));
   }
+
+  // std::vector<tk::spline> splines = get_splines(path.s[0], path.d[0]);
+
+  // for (int i = 0; i < path.s.size(); i++) {
+  //   double x = splines[0](path.s[i]) + splines[2](path.s[i]) * path.d[i];
+  //   double y = splines[1](path.s[i]) + splines[3](path.s[i]) * path.d[i];
+
+  //   trajectory.x.push_back(x);
+  //   trajectory.y.push_back(y);
+  //   trajectory.waypoints.push_back(this->get_nearest_waypoints(path.s[i]));
+  // }
+
 
   std::vector<double> next_x_vals;
   std::vector<double> next_y_vals;
 
-  if (trajectory_prev.size() > 0) {
+  if (trajectory_prev.size() > 9990) {
+    // next_x_vals.push_back(x_last);
+    // next_y_vals.push_back(y_last);
     next_x_vals.push_back(trajectory_prev.x[0]);
     next_y_vals.push_back(trajectory_prev.y[0]);
   } else {
@@ -177,14 +252,14 @@ Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajector
   trajectory.x = next_x_vals;
   trajectory.y = next_y_vals;
 
-  double s = end_path_s;
-  // double s = path.s[0];
-  trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
-  for (int i = 1; i < path.s.size(); i++) {
-    double delta_s = path.s[i] - path.s[i-1];
-    s += delta_s;
-    trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
-  }
+  // double s = end_path_s;
+  // // double s = path.s[0];
+  // trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
+  // for (int i = 1; i < path.s.size(); i++) {
+  //   double delta_s = path.s[i] - path.s[i-1];
+  //   s += delta_s;
+  //   trajectory.waypoints.push_back(this->get_nearest_waypoints(s));
+  // }
 
   return trajectory;
 };

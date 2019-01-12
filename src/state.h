@@ -18,20 +18,20 @@
 using json = nlohmann::json;
 
 std::map<std::string, std::vector<std::string>> STATES_S = {
-    // {"STOP", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "STOP"}},
-    // {"ACC_SOFT", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
-    // {"ACC_MED", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
-    // {"ACC_HARD", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
-    // {"DECC_SOFT", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
-    // {"DECC_MED", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
-    // {"DECC_HARD", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
-    // {"CRUISE", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD", "CRUISE"}},
-    {"STOP", {"ACC_SOFT", "ACC_MED", "ACC_HARD"}},
-    {"ACC_SOFT", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
-    {"ACC_MED", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
-    {"ACC_HARD", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
-    {"DECC_HARD", {"CRUISE", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
-    {"CRUISE", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD", "CRUISE"}},
+    {"STOP", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "STOP"}},
+    {"ACC_SOFT", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"ACC_MED", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"ACC_HARD", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD"}},
+    {"DECC_SOFT", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"DECC_MED", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"DECC_HARD", {"CRUISE", "DECC_SOFT", "DECC_MED", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    {"CRUISE", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_SOFT", "DECC_MED", "DECC_HARD", "CRUISE"}},
+    // {"STOP", {"ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    // {"ACC_SOFT", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
+    // {"ACC_MED", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
+    // {"ACC_HARD", {"CRUISE", "ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD"}},
+    // {"DECC_HARD", {"CRUISE", "DECC_HARD", "ACC_SOFT", "ACC_MED", "ACC_HARD"}},
+    // {"CRUISE", {"ACC_SOFT", "ACC_MED", "ACC_HARD", "DECC_HARD", "CRUISE"}},
 };
 
 std::map<std::string, std::vector<std::string>> STATES_D = {

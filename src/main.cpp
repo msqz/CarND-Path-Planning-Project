@@ -114,7 +114,11 @@ int main() {
                       start.time_since_epoch()
                     ).count();
 
-          json msgJson;
+          json j_prev;
+          j_prev["prev_x"] = previous_path_x;
+          j_prev["prev_y"] = previous_path_y;
+          std::cout << ", \"prev_x\": " << j_prev["prev_x"].dump();
+          std::cout << ", \"prev_y\": " << j_prev["prev_y"].dump();
 
           Localization localization = {
               .x = j[1]["x"],
@@ -146,6 +150,7 @@ int main() {
 
           Path path = planner.next(generator, trajectory_prev, end_path_s);
 
+          json msgJson;
           msgJson["next_x"] = path.trajectory.x;
           msgJson["next_y"] = path.trajectory.y;
 
@@ -154,6 +159,9 @@ int main() {
           j["next_d"] = path.d;
           std::cout << ", \"next_s\": " << j["next_s"].dump();
           std::cout << ", \"next_d\": " << j["next_d"].dump();
+
+          std::cout<< ", \"next_x\": " << msgJson["next_x"].dump();
+          std::cout<< ", \"next_y\": " << msgJson["next_y"].dump();
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 

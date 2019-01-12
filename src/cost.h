@@ -71,7 +71,7 @@ double evaluate_max_acc(Path path, Localization localization) {
   std::cout << ", ";
 
   if (a_max + a_c_max > 10) {
-    return 1;
+    return 0;
   }
 
   return 0;
