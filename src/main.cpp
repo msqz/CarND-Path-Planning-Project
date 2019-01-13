@@ -77,6 +77,7 @@ int main() {
       .dx = map_waypoints_dx,
       .dy = map_waypoints_dy,
   };
+  map.init();
   TrajectoryGenerator generator(map);
   BehaviorPlanner planner;
 

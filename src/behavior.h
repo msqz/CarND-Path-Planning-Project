@@ -10,11 +10,12 @@
 #include "tracking.h"
 #include "trajectory_generator.h"
 
-const double SPEED_LIMIT_WEIGHT = 10.0;
+const double OFFROAD_WEIGHT = 10000.0;
+const double CRASH_WEIGHT = 1000.0;
+const double SPEED_LIMIT_WEIGHT = 100.0;
 const double MAX_ACC_WEIGHT = 10.0;
 const double EFFICIENCY_WEIGHT = 2.0;
-const double CRASH_WEIGHT = 20.0;
-const double OFFROAD_WEIGHT = 10000.0;
+
 const double KEEP_RIGHT_WEIGHT = 0.0;
 const double PREDICTABILITY = 0.01;
 
@@ -201,20 +202,7 @@ Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_
       path.s = path_s.s;
       path.d = path_d.d;
 
-      double x_last = localization.x;
-      double y_last = localization.y;
-
-      // if (trajectory_prev.size() > 0) {
-      //   for (int i = 1; i < this->path_prev.trajectory.x.size(); i++) {
-      //     if (this->path_prev.trajectory.x[i] == trajectory_prev.x[0] &&
-      //         this->path_prev.trajectory.y[i] == trajectory_prev.y[0]) {
-      //           x_last = this->path_prev.trajectory.x[i-1];
-      //           y_last = this->path_prev.trajectory.y[i-1];
-      //     }
-      //   }
-      // }
-
-      path.trajectory = generator.generate(path, trajectory_prev, end_path_s, x_last, y_last);
+      path.trajectory = generator.generate(path, trajectory_prev, localization);
 
       std::cout << "{";
       std::cout << " \"transition\": \"" << transition_s << "/" << transition_d << "\"";

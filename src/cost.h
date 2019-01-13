@@ -34,6 +34,7 @@ double evaluate_speed_limit(Path trajectory) {
 }
 
 double evaluate_max_acc(Path path, Localization localization) {
+  return 0;
   // Use x/y trajectory here
   double a_c_max = 0.0;
 
@@ -70,8 +71,8 @@ double evaluate_max_acc(Path path, Localization localization) {
   std::cout << ", \"a_max\": " << a_max;
   std::cout << ", ";
 
-  if (a_max + a_c_max > 10) {
-    return 0;
+  if (a_max + a_c_max > 9.0) {
+    return 1;
   }
 
   return 0;
@@ -101,10 +102,10 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
   //how many meters do I need to stop (v = 0)?
   double v_max = path.get_max_velocity();
   // TODO which braking decc use as reference point? Should I put add/decc into Path?
-  double t_stop = v_max / BRAKING_DECC;
+  double t_stop = v_max / HARD_DECC_RATE;
   // braking distance + buffer distance
   double s_stop = localization.s +
-                  ((BRAKING_DECC * (t_stop * t_stop)) / 2) +
+                  ((HARD_DECC_RATE * (t_stop * t_stop)) / 2) +
                   FRONT_DISTANCE;
 
   //TODO USE S_STOP WHEN CALCULATING CRASH - otherwise it keeps very large distance from vehicle ahead
@@ -142,6 +143,9 @@ double evaluate_crash(Path path, Localization localization, std::vector<Predicti
     std::vector<double> pred_d = {prediction.d_original, prediction.d};
     for (int i = 0; i < path.size(); i++) {
       // Skip segments which are outside the obstacle trajectory
+      if (path.s[i] > s_stop) {
+        break;
+      }
       if (path.s[i] < pred_s[0] || path.s[i] > pred_s[1]) {
         continue;
       }

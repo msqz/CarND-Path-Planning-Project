@@ -7,6 +7,7 @@ colors = log.get_color(4)
 fig, ax = plt.subplots()
 
 records = [r for r in log.read('stdout.log')]
+print('Found {} records'.format(len(records)))
 
 # print('   {:>20}  {:>20}'.format('current diff', 'prev diff'))
 x_next_x_diff = 0
@@ -14,7 +15,8 @@ prev_x_next_x_diff = 0
 y_next_y_diff = 0
 prev_y_next_y_diff = 0
 # for i in range(1, len(records)):
-for i in range(10,12):
+rng = range(52, 54)
+for i in rng:
 
   # ax.scatter()
   color = next(colors)
@@ -41,9 +43,9 @@ for i in range(10,12):
   # x_last = x[0]
   # y_last = y[0]
 
-print(x_next_x_diff/len(records))
-print(y_next_y_diff/len(records))
-print(prev_x_next_x_diff/len(records))
-print(prev_y_next_y_diff/len(records))
+print('x diff: {}'.format(x_next_x_diff/len(rng)))
+print('y diff: {}'.format(y_next_y_diff/len(rng)))
+print('prev_x diff: {}'.format(prev_x_next_x_diff/len(rng)))
+print('prev_y diff: {}'.format(prev_y_next_y_diff/len(rng)))
 
 plt.show()
