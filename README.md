@@ -12,9 +12,9 @@ Model assumptions are following:
 
 The trajectory generation flow is following:
 1. If there is a car in front of the controlled vehicle, then one of the following maneuvers must be taken:
-a. Slowing down, with defined decceleration rate (main.cpp:204)
-b. Lane change to the left (main.cpp:199)
-c. Lane change to the right (main.cpp:201)
+*. Slowing down, with defined decceleration rate (main.cpp:204)
+*. Lane change to the left (main.cpp:199)
+*. Lane change to the right (main.cpp:201)
 *left change has precedence*
 2. If there is nothing in front of the controlled vehicle, then the vehicle accelerates with defined rate (main.cpp:208), up the the limit speed of 49.0 MPH (main.cpp:204). The 1 MPH buffer is kept to compensate any possible fluctuations of the simulator measurements.
 
