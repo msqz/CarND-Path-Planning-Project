@@ -201,11 +201,11 @@ int main() {
               lane += 1;
             } else {
 							// Deccelerate
-              ref_vel -= 0.224 * 3.0;
+              ref_vel -= 0.224;
             }
-          } else if (ref_vel < 49.5) {
+          } else if (ref_vel < 49.0) {
 						// Accelerate up to the speed limit
-            ref_vel += 0.224 * 2.0;
+            ref_vel += 0.224;
           }
 
           std::vector<double> next_x_vals;
