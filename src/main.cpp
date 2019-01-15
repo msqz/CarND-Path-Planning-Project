@@ -149,7 +149,7 @@ int main() {
             .y = previous_path_y,
           };
 
-          Path path = planner.next(generator, trajectory_prev, end_path_s);
+          Path path = planner.next(generator, trajectory_prev);
 
           json msgJson;
           msgJson["next_x"] = path.trajectory.x;

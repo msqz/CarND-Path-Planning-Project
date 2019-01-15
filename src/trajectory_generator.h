@@ -9,8 +9,8 @@
 #include "spline.h"
 #include "trajectory.h"
 
-const int WAYPOINTS_AHEAD = 10;
-const int WAYPOINTS_BEHIND = 5;
+const int WAYPOINTS_AHEAD = 20;
+const int WAYPOINTS_BEHIND = 10;
 
 struct Map {
   std::vector<double> s;
@@ -50,46 +50,97 @@ class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Map &map);
 
-  Trajectory generate(const Path &path, Trajectory &trajectory_prev, Localization localization);
+  Trajectory generate(Path &path, Trajectory &trajectory_prev, Localization localization);
 };
 
 TrajectoryGenerator::TrajectoryGenerator(const Map &map) {
   this->map = map;
 }
 
-Trajectory TrajectoryGenerator::generate(const Path &path, Trajectory &trajectory_prev, Localization localization) {
+Trajectory TrajectoryGenerator::generate(Path &path, Trajectory &trajectory_prev, Localization localization) {
   Trajectory trajectory;
-  for (int i = 0; i < path.s.size(); i++) {
-    std::vector<double> xy = this->map.get_xy(path.s[i], path.d[i]);
-    trajectory.x.push_back(xy[0]);
-    trajectory.y.push_back(xy[1]);
-  }
+  std::vector<double> ptsx;
+  std::vector<double> ptsy;
 
-  std::vector<double> next_x_vals;
-  std::vector<double> next_y_vals;
+  double ref_x = localization.x;
+  double ref_y = localization.y;
+  double ref_yaw = localization.yaw * M_PI / 180.0;
+  int prev_size = trajectory_prev.size();
 
-  int usage_prev = 5;
-  if (trajectory_prev.size() > usage_prev) {
-    for (int i=0; i < usage_prev; i++) {
-      next_x_vals.push_back(trajectory_prev.x[i]);
-      next_y_vals.push_back(trajectory_prev.y[i]);
-    }
+  if (prev_size < 2) {
+    double x_prev = ref_x - cos(ref_yaw);
+    double y_prev = ref_y - sin(ref_yaw);
+    ptsx.push_back(x_prev);
+    ptsy.push_back(y_prev);
+
+    ptsx.push_back(ref_x);
+    ptsy.push_back(ref_y);
   } else {
-    next_x_vals.push_back(trajectory.x[0]);
-    next_y_vals.push_back(trajectory.y[0]);
+    double x_prev = trajectory_prev.x[prev_size - 2];
+    double y_prev = trajectory_prev.y[prev_size - 2];
+    ptsx.push_back(x_prev);
+    ptsy.push_back(y_prev);
+
+    ref_x = trajectory_prev.x[prev_size - 1];
+    ref_y = trajectory_prev.y[prev_size - 1];
+    ptsx.push_back(ref_x);
+    ptsy.push_back(ref_y);
+
+    ref_yaw = atan2(ref_y - y_prev, ref_x - x_prev);
   }
 
-  double next_idx = next_x_vals.size() - 1;
-  for (int i = 1; i < trajectory.size(); i++) {
-    double delta_x = trajectory.x[i] - trajectory.x[i - 1];
-    double delta_y = trajectory.y[i] - trajectory.y[i - 1];
+  std::vector<double> next_wp0 = this->map.get_xy(localization.s + HORIZON, path.d[path.size() - 1]);
+  std::vector<double> next_wp1 = this->map.get_xy(localization.s + 2 * HORIZON, path.d[path.size() - 1]);
+  std::vector<double> next_wp2 = this->map.get_xy(localization.s + 3 * HORIZON, path.d[path.size() - 1]);
 
-    next_x_vals.push_back(next_x_vals[next_idx + i - 1] + delta_x);
-    next_y_vals.push_back(next_y_vals[next_idx + i - 1] + delta_y);
+  ptsx.push_back(next_wp0[0]);
+  ptsx.push_back(next_wp1[0]);
+  ptsx.push_back(next_wp2[0]);
+
+  ptsy.push_back(next_wp0[1]);
+  ptsy.push_back(next_wp1[1]);
+  ptsy.push_back(next_wp2[1]);
+
+  for (int i = 0; i < ptsx.size(); i++) {
+    double shift_x = ptsx[i] - ref_x;
+    double shift_y = ptsy[i] - ref_y;
+
+    ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
+    ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
   }
 
-  trajectory.x = next_x_vals;
-  trajectory.y = next_y_vals;
+  tk::spline s;
+  s.set_points(ptsx, ptsy);
+
+  for (int i = 0; i < trajectory_prev.size(); i++) {
+    trajectory.x.push_back(trajectory_prev.x[i]);
+    trajectory.y.push_back(trajectory_prev.y[i]);
+  }
+
+  double target_x = HORIZON;  //horizon
+  double target_y = s(target_x);
+  double target_dist = sqrt(pow(target_x, 2) + pow(target_y, 2));
+
+  double x_add_on = 0;
+
+  for (int i = 1; i <= 50 - prev_size; i++) {
+    double N = (target_dist / (0.02 * path.get_max_velocity()));
+    double x_point = x_add_on + (target_x) / N;
+    double y_point = s(x_point);
+
+    x_add_on = x_point;
+
+    double x_ref = x_point;
+    double y_ref = y_point;
+    x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
+    y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
+
+    x_point += ref_x;
+    y_point += ref_y;
+
+    trajectory.x.push_back(x_point);
+    trajectory.y.push_back(y_point);
+  }
 
   return trajectory;
 };

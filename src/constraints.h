@@ -12,7 +12,7 @@ const double SPEED_LIMIT = 45.0;
 const double BUFFER_V = 3.0;
 const double MPH_TO_MS = 0.447;
 const double MS_TO_MPH = 1 / 0.447;
-const int PATH_LENGTH = 200;
+const int PATH_LENGTH = 150;
 const double TRACK_LENGTH = 6945.554;
 const double LANE_WIDTH = 4.0;
 
@@ -27,5 +27,7 @@ const double HARD_ACC_RATE = 4.0;
 const double SOFT_DECC_RATE = 2.0;
 const double MED_DECC_RATE = 3.5;
 const double HARD_DECC_RATE = 5.0;
+
+const double HORIZON = 50.0;
 
 #endif /* CONSTRAINTS_H */

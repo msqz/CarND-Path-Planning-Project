@@ -23,6 +23,7 @@ class BehaviorPlanner {
  private:
   std::string state_s = "STOP";
   std::string state_d = "STRAIGHT";
+  int lane = 1;
   std::vector<Obstacle> obstacles;
   Localization localization;
   Path path_prev;
@@ -35,7 +36,7 @@ class BehaviorPlanner {
   void set_obstacles(const std::vector<Obstacle> &obstacles);
   void set_localization(const Localization &localization);
 
-  Path next(TrajectoryGenerator generator, Trajectory trajectory_prev, double end_path_s);
+  Path next(TrajectoryGenerator generator, Trajectory trajectory_prev);
 };
 
 void BehaviorPlanner::set_obstacles(const std::vector<Obstacle> &obstacles) {
@@ -149,7 +150,7 @@ double BehaviorPlanner::evaluate_path(const Path &path) {
   return cost;
 }
 
-Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_prev, double end_path_s) {
+Path BehaviorPlanner::next(TrajectoryGenerator generator, Trajectory trajectory_prev) {
   std::string state_s_next;
   std::string state_d_next;
   double cost_min = std::numeric_limits<double>::max();
