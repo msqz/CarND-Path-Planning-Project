@@ -829,13 +829,13 @@ vector
 -
 
 /home/m/udacity/CarND-Path-Planning-Project/src/main.cpp
-fstream
--
 math.h
 -
 uWS/uWS.h
 -
 chrono
+-
+fstream
 -
 iostream
 -
@@ -849,4 +849,16 @@ Eigen-3.3/Eigen/QR
 /home/m/udacity/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/QR
 json.hpp
 /home/m/udacity/CarND-Path-Planning-Project/src/json.hpp
+spline.h
+/home/m/udacity/CarND-Path-Planning-Project/src/spline.h
+
+/home/m/udacity/CarND-Path-Planning-Project/src/spline.h
+cstdio
+-
+cassert
+-
+vector
+-
+algorithm
+-
 
