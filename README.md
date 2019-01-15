@@ -1,6 +1,42 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
+
+### Assumptions
+
+Model assumptions are following:
+1. There are three lanes: left, middle and right numbered (respectively) as 1, 2 and 3.
+2. Acceleration and decceleration rates of the controlled vehicle are constant and the equal 1m/s^2 (each).
+3. Generated trajectory length covers 1 second timespan.
+
+### Target state calculation
+
+The trajectory generation flow is following:
+1. If there is a car in front of the controlled vehicle, then one of the following maneuvers must be taken:
+a. Slowing down, with defined decceleration rate (main.cpp:204)
+b. Lane change to the left (main.cpp:199)
+c. Lane change to the right (main.cpp:201)
+*left change has precedence*
+2. If there is nothing in front of the controlled vehicle, then the vehicle accelerates with defined rate (main.cpp:208), up the the limit speed of 49.0 MPH (main.cpp:204). The 1 MPH buffer is kept to compensate any possible fluctuations of the simulator measurements.
+
+Environment interpretation is based on the sensor fusion data sent from the simulator and it's realized by 3 functions:
+1. is_car_in_front() (main.cpp:63) - it detects if there is any vehicle in the same lane as the controlled vehicle within the next 30 meters. The longitudinal position is predicted from the current speed of the vehicle, given by sensor fusion data.
+2. is_left_empty() (main.cpp:104) - it detects if there is any vehicle on the left side of the controlled vehicle. There is a check of the edgee case (being in the leftmost lane) (main.cpp:105). The idea here is to measure if observed vehicle is placed withing the buffer range around the controlled vehicle (10 meters behind and 30 meters ahead of) (main.cpp:94). The position of the observed vehicle is composed from the current longitudinal placement and the predicted one. It prevents the controlled vehicle from smashing into the side of the observed vehicle if they are longitudinal equal.
+3. is_right_empty() (main.cpp:114) - it's the same as the is_left_empty(), but for the lane on the right side.
+
+### Vehicle state
+
+As for the controlled vehicle state keeping - there are two variables shared between all callbacks thate handle the incoming telemetry messages:
+1. lane (main.cpp:161) - it's the current target lane of the controlled vehicle. Possible values are 0, 1, 2, representing (respectively) left, middle and right lane.
+2. ref_vel (main.cpp:162) - it's the current velocity of the controlled vehicle.
+Sharing and manipulating those variables between each cycle allows to continue the maneuvers initiated in previous cycles.
+
+
+### Trajectory generation
+After setting the current state values the Cartesian coordinates trajectory has to be set. The implementation here is taken from the Highway Driving project classroom QA session. It's based on the spline.h library (https://kluge.in-chemnitz.de/opensource/spline/) and the idea there is following:
+1. Get the yaw of the controlled vehicle based on previous path, to keep the transition step smooth (main.cpp:242)
+2. Obtain 3 waypoints (spaced 30 meters apart) ahead of the controlled vehicle. Those waypoints lay on the target lane.
+3. Based on the yaw value of the car and the distance to be driven (from the target velocity) the trajectory is composed.
+
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
 

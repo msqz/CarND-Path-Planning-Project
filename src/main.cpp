@@ -219,6 +219,7 @@ int main() {
           double ref_yaw = car_yaw * M_PI / 180.0;
 
           if (prev_size < 2) {
+						// It's the initial state, need to figure out the car angle
             double x_prev = ref_x - cos(ref_yaw);
             double y_prev = ref_y - sin(ref_yaw);
             ptsx.push_back(x_prev);
@@ -227,6 +228,7 @@ int main() {
             ptsx.push_back(ref_x);
             ptsy.push_back(ref_y);
           } else {
+						// Take the first two points of the previous path to keep the spline smooth
             double x_prev = previous_path_x[prev_size - 2];
             double y_prev = previous_path_y[prev_size - 2];
             ptsx.push_back(x_prev);
@@ -240,6 +242,7 @@ int main() {
             ref_yaw = atan2(ref_y - y_prev, ref_x - x_prev);
           }
 
+					// Using 3 waypoints, 30m spaced to keep the spline smooth
           std::vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           std::vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           std::vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -268,7 +271,7 @@ int main() {
             next_y_vals.push_back(previous_path_y[i]);
           }
 
-          double target_x = 30.0;  //horizon
+          double target_x = 30.0;
           double target_y = s(target_x);
           double target_dist = sqrt(pow(target_x, 2) + pow(target_y, 2));
 
